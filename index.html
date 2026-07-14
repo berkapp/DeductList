@@ -504,13 +504,9 @@ document.getElementById('btnAccess').addEventListener('click', async ()=>{
   lowerCurtain();
 });
 
-// Resume an existing session on page refresh, if any
+// Always ask for the password on every page open — never auto-resume a previous session
 (async ()=>{
-  const { data } = await sb.auth.getSession();
-  if(data.session){
-    await handleSignedIn();
-    document.getElementById('loginOverlay').classList.remove('show');
-  }
+  await sb.auth.signOut();
 })();
 
 
@@ -557,7 +553,8 @@ function docCell(row){
   }
   if(link){
     return `<a href="${link}" target="_blank" rel="noopener">📎 View</a> `
-      + `<button type="button" class="secondary" style="padding:2px 7px;font-size:10.5px" data-action="upload-doc" data-id="${row.id}">Replace</button>`;
+      + `<button type="button" class="secondary" style="padding:2px 7px;font-size:10.5px" data-action="upload-doc" data-id="${row.id}">Replace</button> `
+      + `<button type="button" class="red" style="padding:2px 7px;font-size:10.5px" data-action="delete-doc" data-id="${row.id}">✕</button>`;
   }
   return `<button type="button" class="secondary" style="padding:2px 7px;font-size:10.5px" data-action="upload-doc" data-id="${row.id}">📤 Upload PDF/Image</button>`;
 }
@@ -852,6 +849,27 @@ tbody.addEventListener('click', (e)=>{
   docFileInput.click();
 });
 
+// Extract the storage path back out of a public URL so we can delete/replace the file
+function storagePathFromUrl(url){
+  const marker = '/object/public/' + DOC_BUCKET + '/';
+  const i = url.indexOf(marker);
+  return i === -1 ? null : decodeURIComponent(url.slice(i + marker.length));
+}
+
+tbody.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-action="delete-doc"]');
+  if(!btn) return;
+  const row = DATA.find(r => r.id === btn.getAttribute('data-id'));
+  if(!row || !row.docLink) return;
+  if(!confirm('Delete the attached document for ' + row.code + '? The file will be removed permanently.')) return;
+  const path = storagePathFromUrl(row.docLink);
+  if(path){ await sb.storage.from(DOC_BUCKET).remove([path]); }
+  row.docLink = '';
+  await sb.from('deductions').update({ doc_link: null }).eq('id', row.id);
+  document.getElementById('saveStatus').textContent = 'Document deleted ' + new Date().toLocaleTimeString();
+  render();
+});
+
 docFileInput.addEventListener('change', async ()=>{
   const file = docFileInput.files[0];
   if(!file || !uploadTargetRowId) return;
@@ -875,6 +893,11 @@ docFileInput.addEventListener('change', async ()=>{
     alert('Upload failed: ' + upErr.message);
     document.getElementById('saveStatus').textContent = '';
     return;
+  }
+  // if replacing, remove the previous file from storage so it doesn't pile up
+  if(row.docLink){
+    const oldPath = storagePathFromUrl(row.docLink);
+    if(oldPath){ await sb.storage.from(DOC_BUCKET).remove([oldPath]); }
   }
   const { data: pub } = sb.storage.from(DOC_BUCKET).getPublicUrl(path);
   row.docLink = pub.publicUrl;
