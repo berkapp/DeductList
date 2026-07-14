@@ -69,6 +69,35 @@
   #modeBadge{font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid #999}
   .mode-admin{background:#dcfce7;color:#166534}
   .mode-division{background:#fef3c7;color:#92400e}
+
+  /* ---------- Curtain login screen ---------- */
+  #loginOverlay{ background:transparent; perspective:1000px; }
+  .curtain-wrap{ position:absolute; inset:0; display:flex; overflow:hidden; z-index:1; }
+  .curtain-strip{
+    flex:1 1 auto; height:100%;
+    background: linear-gradient(90deg, #4a0f0f 0%, #8f1f1f 18%, #b53434 35%, #7a1919 50%, #b53434 65%, #8f1f1f 82%, #4a0f0f 100%);
+    box-shadow: inset 12px 0 24px rgba(0,0,0,0.45), inset -12px 0 24px rgba(0,0,0,0.45);
+    transform-origin: top center;
+    animation: curtainSway 5.5s ease-in-out infinite;
+    transition: transform 1.15s cubic-bezier(.6,0,.15,1), opacity 1.15s ease;
+  }
+  .curtain-wrap.rolling .curtain-strip{
+    animation: none !important;
+    transform: translateY(-115%) scaleY(0.25) !important;
+    opacity: 0;
+  }
+  @keyframes curtainSway{
+    0%   { transform: rotateY(0deg) skewX(0deg); }
+    25%  { transform: rotateY(3deg) skewX(1.4deg); }
+    50%  { transform: rotateY(0deg) skewX(0deg); }
+    75%  { transform: rotateY(-3deg) skewX(-1.4deg); }
+    100% { transform: rotateY(0deg) skewX(0deg); }
+  }
+  .login-card{ position:relative; z-index:2; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+  .pw-wrap{ position:relative; display:flex; align-items:center; }
+  .pw-wrap input{ flex:1; padding-right:34px !important; }
+  .eye-btn{ position:absolute; right:6px; background:none; border:none; cursor:pointer; font-size:14px; padding:2px 6px; color:#555; }
+  .hint-text{ color:#b45309; font-size:10.5px; min-height:13px; margin:2px 0 0 }
 </style>
 </head>
 <body>
@@ -96,11 +125,16 @@
 </header>
 
 <div class="modal-overlay show" id="loginOverlay">
-  <div class="modal">
+  <div class="curtain-wrap" id="curtainWrap"></div>
+  <div class="modal login-card">
     <div id="gateChoice">
       <h2>Enter Deduction List</h2>
       <label>Division Passcode</label>
-      <input type="text" id="divisionCode" placeholder="Enter your division's passcode">
+      <div class="pw-wrap">
+        <input type="password" id="divisionCode" placeholder="Enter your division's passcode">
+        <button type="button" class="eye-btn" data-toggle="divisionCode">👁</button>
+      </div>
+      <p id="divisionHint" class="hint-text"></p>
       <p id="divisionError" style="color:var(--danger);font-size:11px;min-height:14px"></p>
       <div class="actions">
         <button class="green" id="divisionSubmit">View My Division</button>
@@ -112,10 +146,14 @@
     </div>
     <div id="adminLoginBox" style="display:none">
       <h2>Admin Sign In</h2>
-      <label>Email</label>
-      <input type="text" id="loginEmail" placeholder="admin@berkeley-deductions.local">
+      <label>Username</label>
+      <input type="text" id="loginEmail" placeholder="admin">
       <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="Password">
+      <div class="pw-wrap">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button type="button" class="eye-btn" data-toggle="loginPassword">👁</button>
+      </div>
+      <p id="loginHint" class="hint-text"></p>
       <p id="loginError" style="color:var(--danger);font-size:11px;min-height:14px"></p>
       <div class="actions">
         <button class="secondary" id="backToDivision">Back</button>
@@ -342,29 +380,70 @@ function applyAccessUI(){
   renderDivisionTabs();
 }
 
+// ---------- Curtain login screen ----------
+const curtainWrap = document.getElementById('curtainWrap');
+const CURTAIN_STRIPS = 16;
+for(let i=0; i<CURTAIN_STRIPS; i++){
+  const s = document.createElement('div');
+  s.className = 'curtain-strip';
+  s.style.animationDelay = (i * 0.12) + 's';
+  curtainWrap.appendChild(s);
+}
+function rollUpCurtain(){
+  curtainWrap.classList.add('rolling');
+  setTimeout(()=>{
+    document.getElementById('loginOverlay').classList.remove('show');
+    curtainWrap.classList.remove('rolling');
+  }, 1150);
+}
+function lowerCurtain(){
+  document.getElementById('loginOverlay').classList.add('show');
+}
+
+// Eye icons to show/hide password fields
+document.querySelectorAll('.eye-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const input = document.getElementById(btn.getAttribute('data-toggle'));
+    input.type = input.type === 'password' ? 'text' : 'password';
+    btn.textContent = input.type === 'password' ? '👁' : '🙈';
+  });
+});
+
+// Lowercase reminder — passwords/passcodes here are only ever compared in lowercase
+function watchForUppercase(inputId, hintId){
+  const input = document.getElementById(inputId);
+  const hint = document.getElementById(hintId);
+  input.addEventListener('input', ()=>{
+    hint.textContent = /[A-Z]/.test(input.value) ? 'Please use lowercase letters.' : '';
+  });
+}
+watchForUppercase('divisionCode', 'divisionHint');
+watchForUppercase('loginPassword', 'loginHint');
+
 // ---------- Division passcodes ----------
 // Soft gate for VIEWING only — change these however you like, just edit this file.
 // The part that actually matters for security (editing/deleting) is enforced by
 // Supabase itself: only the one real admin login below can write, no matter what
 // passcode someone types here.
 const DIVISION_PASSCODES = {
-  'Cleaning': 'CLEAN2026',
-  'Laundry': 'LAUNDRY2026',
-  'Security': 'SECURITY2026',
-  'Landscaping': 'LANDSCAPE2026',
-  'Catering': 'CATERING2026',
-  'Maintenance': 'MAINT2026'
+  'Cleaning': 'clean2026',
+  'Laundry': 'laundry2026',
+  'Security': 'security2026',
+  'Landscaping': 'landscape2026',
+  'Catering': 'catering2026',
+  'Maintenance': 'maint2026'
 };
 
 document.getElementById('divisionSubmit').addEventListener('click', async ()=>{
-  const code = document.getElementById('divisionCode').value.trim();
+  const code = document.getElementById('divisionCode').value.trim().toLowerCase();
   const match = Object.keys(DIVISION_PASSCODES).find(d => DIVISION_PASSCODES[d] === code);
-  if(!match){ document.getElementById('divisionError').textContent = 'Incorrect passcode.'; return; }
+  if(!match){ document.getElementById('divisionError').textContent = 'Password entered wrong, please try again.'; return; }
+  document.getElementById('divisionError').textContent = '';
   accessMode = 'division'; lockedDivision = match; divisionTabFilter = match;
-  document.getElementById('loginOverlay').classList.remove('show');
   await loadData();
   applyAccessUI();
   render();
+  rollUpCurtain();
 });
 
 document.getElementById('showAdminLogin').addEventListener('click', ()=>{
@@ -379,7 +458,6 @@ document.getElementById('backToDivision').addEventListener('click', ()=>{
 // ---------- Admin sign in / sign out ----------
 async function handleSignedIn(){
   accessMode = 'admin'; lockedDivision = null; divisionTabFilter = '';
-  document.getElementById('loginOverlay').classList.remove('show');
   await loadData();
   applyAccessUI();
   render();
@@ -387,13 +465,14 @@ async function handleSignedIn(){
 
 const LOGIN_DOMAIN = '@berkeley-deductions.local';
 document.getElementById('loginSubmit').addEventListener('click', async ()=>{
-  let username = document.getElementById('loginEmail').value.trim();
-  const email = username.includes('@') ? username : (username.toLowerCase() + LOGIN_DOMAIN);
-  const password = document.getElementById('loginPassword').value;
+  let username = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const email = username.includes('@') ? username : (username + LOGIN_DOMAIN);
+  const password = document.getElementById('loginPassword').value.toLowerCase();
   document.getElementById('loginError').textContent = '';
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if(error){ document.getElementById('loginError').textContent = error.message; return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ document.getElementById('loginError').textContent = 'Password entered wrong, please try again.'; return; }
   await handleSignedIn();
+  rollUpCurtain();
 });
 
 document.getElementById('btnAccess').addEventListener('click', async ()=>{
@@ -404,15 +483,20 @@ document.getElementById('btnAccess').addEventListener('click', async ()=>{
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('divisionCode').value = '';
+  document.getElementById('divisionError').textContent = '';
+  document.getElementById('loginError').textContent = '';
   document.getElementById('adminLoginBox').style.display = 'none';
   document.getElementById('gateChoice').style.display = '';
-  document.getElementById('loginOverlay').classList.add('show');
+  lowerCurtain();
 });
 
 // Resume an existing session on page refresh, if any
 (async ()=>{
   const { data } = await sb.auth.getSession();
-  if(data.session){ await handleSignedIn(); }
+  if(data.session){
+    await handleSignedIn();
+    document.getElementById('loginOverlay').classList.remove('show');
+  }
 })();
 
 
