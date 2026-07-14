@@ -98,9 +98,15 @@
   .pw-wrap input{ flex:1; padding-right:34px !important; }
   .eye-btn{ position:absolute; right:6px; background:none; border:none; cursor:pointer; font-size:14px; padding:2px 6px; color:#555; }
   .hint-text{ color:#b45309; font-size:10.5px; min-height:13px; margin:2px 0 0 }
+  .code-link{ color:var(--accent); text-decoration:underline; cursor:pointer; font-weight:600 }
+  .toast{ position:fixed; top:16px; left:50%; transform:translateX(-50%); background:#166534; color:#fff;
+    padding:10px 20px; border-radius:8px; font-size:13px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.3);
+    opacity:0; transition:opacity .4s ease; pointer-events:none; }
+  .toast.show{ opacity:1; }
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 
 <header>
   <h1>Berkeley Services — Deduction List</h1>
@@ -434,6 +440,13 @@ const DIVISION_PASSCODES = {
   'Maintenance': 'maint2026'
 };
 
+function showToast(msg, ms){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), ms || 4000);
+}
+
 document.getElementById('divisionSubmit').addEventListener('click', async ()=>{
   const code = document.getElementById('divisionCode').value.trim().toLowerCase();
   const match = Object.keys(DIVISION_PASSCODES).find(d => DIVISION_PASSCODES[d] === code);
@@ -444,6 +457,7 @@ document.getElementById('divisionSubmit').addEventListener('click', async ()=>{
   applyAccessUI();
   render();
   rollUpCurtain();
+  setTimeout(()=> showToast('Welcome ' + match + ' Division. This is Only Preview Mode.', 5000), 1200);
 });
 
 document.getElementById('showAdminLogin').addEventListener('click', ()=>{
@@ -553,7 +567,9 @@ function rowHtml(row, sl){
   html += ro
     ? `<td>${row.division||''}</td>`
     : `<td><select data-id="${row.id}" data-field="division"><option value=""></option>${DIVISIONS.map(d=>`<option ${d===row.division?'selected':''}>${d}</option>`).join('')}</select></td>`;
-  html += `<td>${row.code}</td>`;
+  html += ro
+    ? `<td>${row.code}</td>`
+    : `<td><a href="javascript:void(0)" class="code-link" data-code="${row.code}" data-name="${(row.name||'').replace(/"/g,'&quot;')}" data-division="${row.division||''}" title="Add another deduction for this employee">${row.code}</a></td>`;
   html += ro
     ? `<td>${row.name||''}</td>`
     : `<td class="name-cell"><input data-id="${row.id}" data-field="name" value="${(row.name||'').replace(/"/g,'&quot;')}" placeholder="type name..."></td>`;
@@ -731,11 +747,32 @@ document.getElementById('btnCarryForward').addEventListener('click', async ()=>{
 
 // ---------- Add modal ----------
 const overlay = document.getElementById('modalOverlay');
-function openModal(){
+
+// Auto-suggest division from employee code prefix (editable afterward — just a starting guess)
+// Longer/more specific prefixes are checked first (LS before L) to avoid mismatches.
+const CODE_PREFIX_DIVISION = [
+  ['LS', 'Landscaping'],
+  ['C',  'Cleaning'],
+  ['F',  'Catering'],
+  ['M',  'Maintenance'],
+  ['L',  'Laundry'],
+  ['S',  'Security']
+];
+function guessDivisionFromCode(code){
+  if(!code) return '';
+  const up = code.trim().toUpperCase();
+  for(const [prefix, division] of CODE_PREFIX_DIVISION){
+    if(up.startsWith(prefix)) return division;
+  }
+  return '';
+}
+
+function openModal(presets){
+  presets = presets || {};
   document.getElementById('modalTitle').textContent = 'Add Deduction';
-  document.getElementById('f_code').value = '';
-  document.getElementById('f_name').value = '';
-  document.getElementById('f_division').value = '';
+  document.getElementById('f_code').value = presets.code || '';
+  document.getElementById('f_name').value = presets.name || '';
+  document.getElementById('f_division').value = presets.division || guessDivisionFromCode(presets.code || '');
   document.querySelector('input[name=dtype][value=EID]').checked = true;
   document.getElementById('f_amount').value = '';
   document.getElementById('f_year').value = String(currentYear);
@@ -745,9 +782,29 @@ function openModal(){
   document.getElementById('f_doclink').value = '';
   overlay.classList.add('show');
 }
-document.getElementById('btnAdd').addEventListener('click', openModal);
+document.getElementById('btnAdd').addEventListener('click', ()=> openModal());
 document.getElementById('btnCancel').addEventListener('click', ()=> overlay.classList.remove('show'));
 overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('show'); });
+
+// Auto-fill division as the user types a new code, only if they haven't already picked one
+document.getElementById('f_code').addEventListener('input', (e)=>{
+  const divisionField = document.getElementById('f_division');
+  if(!divisionField.value){
+    divisionField.value = guessDivisionFromCode(e.target.value);
+  }
+});
+
+// Clicking a Code No. in the table (admin only) opens the modal ready to add another
+// deduction for that same employee
+tbody.addEventListener('click', (e)=>{
+  const link = e.target.closest('.code-link');
+  if(!link) return;
+  openModal({
+    code: link.getAttribute('data-code'),
+    name: link.getAttribute('data-name'),
+    division: link.getAttribute('data-division')
+  });
+});
 
 document.getElementById('btnSaveRow').addEventListener('click', async ()=>{
   const code = document.getElementById('f_code').value.trim();
