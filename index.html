@@ -122,6 +122,7 @@
     </label>
     <button class="secondary" id="btnImport">⬆ Import Excel</button>
     <input type="file" id="fileInput" accept=".xlsx" style="display:none">
+    <input type="file" id="docFileInput" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,application/pdf,image/*" style="display:none">
     <button class="green" id="btnExport">⬇ Export to Excel</button>
     <button class="secondary" id="btnAccess">🔒 Sign Out</button>
     <span id="modeBadge"></span>
@@ -218,8 +219,7 @@
     </div>
     <label>Reference Type / Remarks (reason)</label>
     <input type="text" id="f_remarks">
-    <label>Document Link (fine / invoice / LPV — paste a link)</label>
-    <input type="text" id="f_doclink" placeholder="https://...">
+    <p style="color:var(--muted);font-size:11px;margin-top:6px">You can attach the PDF/invoice/LPV photo from the table's Documents column after saving.</p>
     <div class="actions">
       <button class="secondary" id="btnCancel">Cancel</button>
       <button class="green" id="btnSaveRow">Save</button>
@@ -553,10 +553,13 @@ function matches(row){
 function docCell(row){
   const link = row.docLink || '';
   if(isReadOnly()){
-    return link ? `<a href="${link}" target="_blank" rel="noopener">📎 View document</a>` : '';
+    return link ? `<a href="${link}" target="_blank" rel="noopener">📎 View / Download</a>` : '<span style="color:#999">—</span>';
   }
-  const linkPreview = link ? `<a href="${link}" target="_blank" rel="noopener" style="margin-right:4px">📎</a>` : '';
-  return `${linkPreview}<input data-id="${row.id}" data-field="docLink" value="${link.replace(/"/g,'&quot;')}" placeholder="paste document link...">`;
+  if(link){
+    return `<a href="${link}" target="_blank" rel="noopener">📎 View</a> `
+      + `<button type="button" class="secondary" style="padding:2px 7px;font-size:10.5px" data-action="upload-doc" data-id="${row.id}">Replace</button>`;
+  }
+  return `<button type="button" class="secondary" style="padding:2px 7px;font-size:10.5px" data-action="upload-doc" data-id="${row.id}">📤 Upload PDF/Image</button>`;
 }
 
 function rowHtml(row, sl){
@@ -779,7 +782,6 @@ function openModal(presets){
   document.getElementById('f_reffrom').value = '';
   document.getElementById('f_refno').value = '';
   document.getElementById('f_remarks').value = '';
-  document.getElementById('f_doclink').value = '';
   overlay.classList.add('show');
 }
 document.getElementById('btnAdd').addEventListener('click', ()=> openModal());
@@ -825,7 +827,7 @@ document.getElementById('btnSaveRow').addEventListener('click', async ()=>{
     pendingDeduction: amount,
     year: Number(document.getElementById('f_year').value),
     months,
-    docLink: document.getElementById('f_doclink').value.trim(),
+    docLink: '',
     source: 'Manual Entry'
   };
   const { data, error } = await sb.from('deductions').insert(toDb(row)).select().single();
@@ -833,6 +835,52 @@ document.getElementById('btnSaveRow').addEventListener('click', async ()=>{
   DATA.unshift(fromDb(data));
   render();
   overlay.classList.remove('show');
+});
+
+// ---------- Document upload (PDF / images only, via Supabase Storage) ----------
+const DOC_BUCKET = 'deduction-documents';
+const ALLOWED_DOC_EXT = ['pdf','jpg','jpeg','png','gif','webp','heic','heif'];
+const MAX_DOC_BYTES = 50 * 1024 * 1024; // 50MB — matches the bucket's configured limit
+let uploadTargetRowId = null;
+const docFileInput = document.getElementById('docFileInput');
+
+tbody.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-action="upload-doc"]');
+  if(!btn) return;
+  uploadTargetRowId = btn.getAttribute('data-id');
+  docFileInput.value = '';
+  docFileInput.click();
+});
+
+docFileInput.addEventListener('change', async ()=>{
+  const file = docFileInput.files[0];
+  if(!file || !uploadTargetRowId) return;
+  const row = DATA.find(r => r.id === uploadTargetRowId);
+  if(!row) return;
+
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if(!ALLOWED_DOC_EXT.includes(ext)){
+    alert('Only PDF and image files are allowed (pdf, jpg, jpeg, png, gif, webp, heic, heif). "' + file.name + '" was not uploaded.');
+    return;
+  }
+  if(file.size > MAX_DOC_BYTES){
+    alert('That file is ' + (file.size/1024/1024).toFixed(1) + 'MB — the limit is 50MB. Please compress it or upload a smaller version.');
+    return;
+  }
+
+  document.getElementById('saveStatus').textContent = 'Uploading document...';
+  const path = row.code + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const { error: upErr } = await sb.storage.from(DOC_BUCKET).upload(path, file, { upsert: false });
+  if(upErr){
+    alert('Upload failed: ' + upErr.message);
+    document.getElementById('saveStatus').textContent = '';
+    return;
+  }
+  const { data: pub } = sb.storage.from(DOC_BUCKET).getPublicUrl(path);
+  row.docLink = pub.publicUrl;
+  await sb.from('deductions').update({ doc_link: row.docLink }).eq('id', row.id);
+  document.getElementById('saveStatus').textContent = 'Document uploaded ' + new Date().toLocaleTimeString();
+  render();
 });
 
 // ---------- Export ----------
