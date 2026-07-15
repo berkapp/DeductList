@@ -37,9 +37,37 @@
     white-space:nowrap;z-index:5;color:#000}
   thead tr.r1 th{top:0;z-index:6}
   thead tr.r2 th{top:26px;z-index:5;font-weight:400;color:var(--muted)}
-  tbody td{padding:4px 5px;white-space:nowrap;font-size:11.5px;background:#fff}
-  tbody tr:nth-child(even) td{background:#fafafa}
-  tbody tr:hover td{background:#eef4ff}
+  tbody td{padding:4px 5px;white-space:nowrap;font-size:11.5px;background:#e9f1f2;color:#000}
+  tbody tr:nth-child(even) td{background:#d7e4e7}
+  tbody tr:hover td{background:#c7dbe0}
+
+  tbody td:nth-child(2) select{width:100%;padding:4px 4px;font-size:11px}
+
+  /* ---- Excel-style FREEZE: first 5 columns stay fixed while scrolling right ---- */
+  /* Fixed widths so the left offsets line up exactly */
+  thead tr.r1 th:nth-child(1), tbody td:nth-child(1){width:36px;min-width:36px;max-width:36px}
+  thead tr.r1 th:nth-child(2), tbody td:nth-child(2){width:112px;min-width:112px;max-width:112px}
+  thead tr.r1 th:nth-child(3), tbody td:nth-child(3){width:80px;min-width:80px;max-width:80px}
+  thead tr.r1 th:nth-child(4), tbody td:nth-child(4){width:152px;min-width:152px;max-width:152px}
+  thead tr.r1 th:nth-child(5), tbody td:nth-child(5){width:92px;min-width:92px;max-width:92px}
+
+  tbody td:nth-child(-n+5){position:sticky;z-index:3}
+  tbody td:nth-child(1){left:0}
+  tbody td:nth-child(2){left:36px}
+  tbody td:nth-child(3){left:148px}
+  tbody td:nth-child(4){left:228px}
+  tbody td:nth-child(5){left:380px;box-shadow:2px 0 0 #333}
+
+  thead tr.r1 th:nth-child(-n+5){z-index:8}
+  thead tr.r1 th:nth-child(1){left:0}
+  thead tr.r1 th:nth-child(2){left:36px}
+  thead tr.r1 th:nth-child(3){left:148px}
+  thead tr.r1 th:nth-child(4){left:228px}
+  thead tr.r1 th:nth-child(5){left:380px;box-shadow:2px 0 0 #333}
+
+  tfoot td:nth-child(1){left:0;z-index:7}
+  tfoot td:nth-child(2){left:380px;z-index:7;box-shadow:2px 0 0 #333}
+  tfoot td:nth-child(-n+2){position:sticky}
   td input{background:transparent;border:1px solid transparent;color:#000;width:100%;padding:3px 4px;border-radius:3px;font-size:11.5px}
   td input:focus{background:#fff;border-color:var(--accent)}
   td.name-cell input{min-width:130px}
