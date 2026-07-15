@@ -13,35 +13,75 @@
     --head:#e9ebef;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,sans-serif;font-size:13px}
-  header{position:sticky;top:0;z-index:30;background:#ffffff;border-bottom:2px solid var(--border);padding:12px 16px}
-  header h1{margin:0 0 2px 0;font-size:17px;color:#000}
-  header p{margin:0;color:var(--muted);font-size:11px}
-  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
-  input[type=text],input[type=number]{background:#fff;border:1px solid #999;color:#000;padding:6px 9px;border-radius:4px}
-  select{background:#fff;border:1px solid #999;color:#000;padding:6px 8px;border-radius:4px}
-  button{background:var(--accent);color:#fff;border:none;padding:7px 12px;border-radius:4px;cursor:pointer;font-size:12px}
+  html{background:#bfe3f2}
+  body{margin:0;background:transparent;color:var(--text);font-family:Segoe UI,Arial,sans-serif;font-size:11px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,0.90);backdrop-filter:blur(2px);border-bottom:2px solid var(--border);padding:8px 14px}
+  header h1{margin:0 0 2px 0;font-size:16px;color:#000}
+  header p{margin:0;color:var(--muted);font-size:10.5px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+
+  /* ================= Sky wallpaper background ================= */
+  #skyBg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+    background:
+      radial-gradient(ellipse 900px 700px at -5% 8%, rgba(255,175,110,0.85) 0%, rgba(255,140,110,0.55) 22%, rgba(255,170,140,0.0) 55%),
+      linear-gradient(180deg, #6fb6e8 0%, #8fc9ef 30%, #bfe3f2 65%, #dff1ee 100%);
+  }
+  #skyBg .sun, #loginOverlay .sun{position:absolute;left:2%;top:6%;width:90px;height:90px;border-radius:50%;
+    background:radial-gradient(circle, #fff6d8 0%, #ffd98a 45%, rgba(255,180,120,0.15) 75%, rgba(255,180,120,0) 100%);
+    box-shadow:0 0 60px 20px rgba(255,210,140,0.45);}
+  #skyBg .cloud, #loginOverlay .cloud{position:absolute;opacity:0.9;background:#fff;border-radius:50px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.06);animation-name:driftCloud;animation-timing-function:linear;animation-iteration-count:infinite;}
+  #skyBg .cloud::before, #loginOverlay .cloud::before,#skyBg .cloud::after, #loginOverlay .cloud::after{content:"";position:absolute;background:#fff;border-radius:50%;}
+  #skyBg .c1, #loginOverlay .c1{width:120px;height:36px;top:10%;left:-200px;animation-duration:70s;}
+  #skyBg .c1::before, #loginOverlay .c1::before{width:60px;height:60px;top:-30px;left:15px;}
+  #skyBg .c1::after, #loginOverlay .c1::after{width:44px;height:44px;top:-20px;left:60px;}
+  #skyBg .c2, #loginOverlay .c2{width:90px;height:28px;top:22%;left:-160px;animation-duration:95s;animation-delay:-20s;opacity:0.8;}
+  #skyBg .c2::before, #loginOverlay .c2::before{width:44px;height:44px;top:-22px;left:10px;}
+  #skyBg .c2::after, #loginOverlay .c2::after{width:34px;height:34px;top:-14px;left:44px;}
+  #skyBg .c3, #loginOverlay .c3{width:150px;height:40px;top:15%;left:-220px;animation-duration:120s;animation-delay:-55s;opacity:0.7;}
+  #skyBg .c3::before, #loginOverlay .c3::before{width:70px;height:70px;top:-34px;left:20px;}
+  #skyBg .c3::after, #loginOverlay .c3::after{width:50px;height:50px;top:-22px;left:80px;}
+  #skyBg .c4, #loginOverlay .c4{width:80px;height:24px;top:32%;left:-140px;animation-duration:80s;animation-delay:-40s;opacity:0.6;}
+  #skyBg .c4::before, #loginOverlay .c4::before{width:38px;height:38px;top:-18px;left:8px;}
+  #skyBg .c4::after, #loginOverlay .c4::after{width:28px;height:28px;top:-10px;left:38px;}
+  @keyframes driftCloud{ from{transform:translateX(0);} to{transform:translateX(calc(100vw + 260px));} }
+
+  #skyBg .bird, #loginOverlay .bird{position:absolute;width:26px;height:12px;animation-name:flyBird;animation-timing-function:linear;animation-iteration-count:infinite;}
+  #skyBg .bird svg, #loginOverlay .bird svg{width:100%;height:100%;display:block;animation:flap 0.9s ease-in-out infinite;}
+  #skyBg .b1, #loginOverlay .b1{top:18%;left:-40px;animation-duration:18s;}
+  #skyBg .b2, #loginOverlay .b2{top:26%;left:-40px;animation-duration:22s;animation-delay:-6s;}
+  #skyBg .b3, #loginOverlay .b3{top:14%;left:-40px;animation-duration:26s;animation-delay:-14s;}
+  #skyBg .b4, #loginOverlay .b4{top:34%;left:-40px;animation-duration:20s;animation-delay:-3s;}
+  @keyframes flyBird{ from{transform:translateX(0);} to{transform:translateX(calc(100vw + 60px));} }
+  @keyframes flap{ 0%,100%{transform:scaleY(1);} 50%{transform:scaleY(0.55);} }
+  @media (prefers-reduced-motion: reduce){
+    #skyBg .cloud, #loginOverlay .cloud, #skyBg .bird, #loginOverlay .bird, #skyBg .bird svg, #loginOverlay .bird svg{animation:none;}
+  }
+  input[type=text],input[type=number]{background:#fff;border:1px solid #999;color:#000;padding:5px 8px;border-radius:4px;font-size:11.5px}
+  select{background:#fff;border:1px solid #999;color:#000;padding:5px 7px;border-radius:4px;font-size:11.5px}
+  button{background:var(--accent);color:#fff;border:none;padding:6px 11px;border-radius:4px;cursor:pointer;font-size:11.5px}
   button.secondary{background:#eee;border:1px solid #999;color:#000}
   button.green{background:var(--accent2)}
   button.red{background:var(--danger)}
   button:hover{filter:brightness(1.1)}
-  .stats{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
-  .stat{background:var(--panel2);border:1px solid #ccc;border-radius:6px;padding:7px 12px;min-width:110px}
-  .stat .n{font-size:15px;font-weight:700;color:#000}
-  .stat .l{font-size:10px;color:var(--muted)}
+  .stats{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .stat{background:rgba(244,245,247,0.92);border:1px solid #ccc;border-radius:5px;padding:4px 9px;min-width:88px}
+  .stat .n{font-size:12.5px;font-weight:700;color:#000}
+  .stat .l{font-size:9px;color:var(--muted)}
 
-  .wrap{overflow:auto;max-height:calc(100vh - 205px);margin:0 10px 10px 10px;border:1px solid var(--border)}
-  table{border-collapse:collapse;width:100%;min-width:2050px}
-  th,td{border:1px solid #999}
-  thead th{position:sticky;background:var(--head);padding:6px 5px;font-size:10.5px;text-align:center;
-    white-space:nowrap;z-index:5;color:#000}
+  .wrap{overflow:auto;max-height:calc(100vh - 175px);margin:0 10px 10px 10px;border:1px solid var(--border);
+    background:rgba(255,255,255,0.94);border-radius:4px;position:relative;z-index:1}
+  table{border-collapse:collapse;width:100%;min-width:2200px}
+  th,td{border:1px solid #bbb}
+  thead th{position:sticky;background:var(--head);padding:3px 4px;font-size:9px;text-align:center;
+    white-space:nowrap;z-index:5;color:#000;line-height:1.25}
   thead tr.r1 th{top:0;z-index:6}
-  thead tr.r2 th{top:26px;z-index:5;font-weight:400;color:var(--muted)}
-  tbody td{padding:4px 5px;white-space:nowrap;font-size:11.5px;background:#fff;color:#000}
+  thead tr.r2 th{top:20px;z-index:5;font-weight:400;color:var(--muted)}
+  tbody td{padding:1px 4px;white-space:nowrap;font-size:9.5px;background:#fff;color:#000;line-height:1.5}
   tbody tr:nth-child(even) td{background:#fafafa}
   tbody tr:hover td{background:#eef4ff}
 
-  tbody td:nth-child(2) select{width:100%;padding:4px 4px;font-size:11px}
+  tbody td:nth-child(2) select{width:100%;padding:2px 3px;font-size:9.5px}
 
   /* ---- Excel-style FREEZE: first 5 columns stay fixed while scrolling right ---- */
   /* Fixed widths so the left offsets line up exactly */
@@ -68,16 +108,18 @@
   tfoot td:nth-child(1){left:0;z-index:7}
   tfoot td:nth-child(2){left:380px;z-index:7;box-shadow:2px 0 0 #333}
   tfoot td:nth-child(-n+2){position:sticky}
-  td input{background:transparent;border:1px solid transparent;color:#000;width:100%;padding:3px 4px;border-radius:3px;font-size:11.5px}
+  td input{background:transparent;border:1px solid transparent;color:#000;width:100%;padding:1px 3px;border-radius:2px;font-size:9.5px}
   td input:focus{background:#fff;border-color:var(--accent)}
-  td.name-cell input{min-width:130px}
-  td.rmk-cell input{min-width:220px}
-  td.amt input{text-align:right;width:60px}
+  td.name-cell input{min-width:110px}
+  td.rmk-cell input{min-width:170px}
+  td.amt input{text-align:right;width:52px}
   .amt{text-align:right;font-variant-numeric:tabular-nums}
   .total-col{font-weight:700;color:#000}
   .balance-col{font-weight:700;color:#b91c1c}
-  tfoot td{position:sticky;bottom:0;background:var(--head);font-weight:700;border-top:2px solid var(--border);padding:7px 5px;color:#000}
+  tfoot td{position:sticky;bottom:0;background:var(--head);font-weight:700;border-top:2px solid var(--border);padding:3px 4px;color:#000;font-size:9.5px}
   .yearsel{width:66px}
+  .extid-cell{font-size:9px;color:#333}
+  .extid-cell button{padding:1px 5px;font-size:8.5px}
 
   .modal-overlay{display:none;position:fixed;inset:0;background:#0006;z-index:100;align-items:center;justify-content:center}
   .modal-overlay.show{display:flex}
@@ -90,7 +132,8 @@
   .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
   .radio-group{display:flex;gap:14px;margin-top:4px}
   .radio-group label{display:flex;align-items:center;gap:5px;color:#000;font-size:12px}
-  .footer-note{padding:6px 16px 14px;color:var(--muted);font-size:10.5px}
+  .footer-note{padding:6px 16px 14px;color:var(--muted);font-size:10.5px;position:relative;z-index:1;
+    background:rgba(255,255,255,0.75);margin:0 10px;border-radius:4px}
   .tabs{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
   .tab{background:#eee;border:1px solid #999;color:#000;padding:5px 12px;border-radius:14px;cursor:pointer;font-size:11.5px}
   .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -98,8 +141,13 @@
   .mode-admin{background:#dcfce7;color:#166534}
   .mode-division{background:#fef3c7;color:#92400e}
 
-  /* ---------- Login screen: clean dark background ---------- */
-  #loginOverlay{ background:rgba(15,23,42,0.82); backdrop-filter:blur(3px); }
+  /* ---------- Login screen: fully opaque sky wallpaper (no dashboard visible behind it) ---------- */
+  #loginOverlay{
+    background:
+      radial-gradient(ellipse 900px 700px at -5% 8%, rgba(255,175,110,0.85) 0%, rgba(255,140,110,0.55) 22%, rgba(255,170,140,0.0) 55%),
+      linear-gradient(180deg, #5da3d9 0%, #7fbfe6 30%, #a9d6ee 65%, #cdeae3 100%);
+    overflow:hidden;
+  }
   .curtain-wrap{ display:none; }
   .login-card{ box-shadow:0 20px 60px rgba(0,0,0,0.5); }
   .login-card{ position:relative; z-index:2; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
@@ -115,6 +163,17 @@
 </style>
 </head>
 <body>
+<div id="skyBg">
+  <div class="sun"></div>
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="cloud c3"></div>
+  <div class="cloud c4"></div>
+  <div class="bird b1"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+  <div class="bird b2"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+  <div class="bird b3"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+  <div class="bird b4"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <header>
@@ -142,6 +201,15 @@
 </header>
 
 <div class="modal-overlay show" id="loginOverlay">
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="cloud c3"></div>
+  <div class="cloud c4"></div>
+  <div class="sun" style="position:absolute"></div>
+  <div class="bird b1"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+  <div class="bird b2"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+  <div class="bird b3"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+  <div class="bird b4"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
   <div class="curtain-wrap" id="curtainWrap"></div>
   <div class="modal login-card">
     <div id="gateChoice">
@@ -192,6 +260,7 @@
 </div>
 <div class="footer-note">
   Data autosaves to this browser (localStorage) as you type or add/delete rows. Monthly JAN–DEC figures start blank — enter them yourself as deductions actually happen. Pending Deduction = amount owed at creation. Total Deducted = sum of JAN–DEC entered so far. Balance Deduction = Pending Deduction − Total Deducted.
+  <br><b>External ID:</b> every fine/charge row has its own unique External ID (last column). Export to Excel, fill in the monthly payment amount next to the correct External ID, then Import that file back — the app matches each amount to the exact row by its External ID, so it can never land on the wrong month or the wrong fine.
 </div>
 
 <!-- Add/Edit Modal -->
@@ -257,8 +326,13 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let DATA = [];
 
+// Whether the Supabase table has an `external_id` column yet. Detected at startup
+// (see ensureExternalIdSupport). Until the column is added in Supabase, External IDs
+// still work in the browser for this session, but won't be saved between reloads.
+let externalIdColumnReady = true;
+
 function toDb(row){
-  return {
+  const base = {
     division: row.division || null,
     code: row.code,
     name: row.name || null,
@@ -275,6 +349,10 @@ function toDb(row){
     source: row.source || null,
     carried_forward: !!row.carriedForward
   };
+  // Only send external_id once we've confirmed the column exists — sending an unknown
+  // column to Supabase/PostgREST would make the ENTIRE insert/update fail.
+  if(externalIdColumnReady) base.external_id = row.externalId || null;
+  return base;
 }
 function fromDb(r){
   return {
@@ -293,8 +371,47 @@ function fromDb(r){
     months: r.months || {},
     docLink: r.doc_link || '',
     source: r.source || '',
-    carriedForward: !!r.carried_forward
+    carriedForward: !!r.carried_forward,
+    externalId: r.external_id || ''
   };
+}
+
+// ---------- External ID: one guaranteed-unique ID per deduction row ----------
+// Format: <EMPLOYEE CODE>-<sequence>, e.g. C6637-01, C6637-02, C6637-03 — so every
+// single fine/charge for an employee gets its own ID and can never be confused with
+// another one of their rows when importing monthly payments from Excel.
+function genExternalId(code){
+  const base = String(code || '').trim().toUpperCase() || 'ROW';
+  let maxN = 0;
+  DATA.forEach(r=>{
+    if(!r.externalId) return;
+    const m = r.externalId.match(new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '-(\\d+)$'));
+    if(m) maxN = Math.max(maxN, parseInt(m[1], 10));
+  });
+  return base + '-' + String(maxN + 1).padStart(2, '0');
+}
+
+// Detect whether Supabase already has the external_id column, and silently backfill
+// an ID for any row that doesn't have one yet (older rows created before this feature).
+async function ensureExternalIdSupport(){
+  const { error } = await sb.from('deductions').select('external_id').limit(1);
+  externalIdColumnReady = !error;
+  if(error){
+    document.getElementById('saveStatus').textContent =
+      'Note: run the External ID SQL in Supabase to save IDs permanently (see instructions).';
+  }
+  const toBackfill = [];
+  DATA.forEach(row=>{
+    if(!row.externalId){
+      row.externalId = genExternalId(row.code);
+      toBackfill.push(row);
+    }
+  });
+  if(toBackfill.length && externalIdColumnReady && accessMode === 'admin'){
+    for(const row of toBackfill){
+      await sb.from('deductions').update({ external_id: row.externalId }).eq('id', row.id);
+    }
+  }
 }
 
 function uid(){ return Math.random().toString(36).slice(2,10); } // only used for transient client-side needs
@@ -359,6 +476,7 @@ headRow1.innerHTML = `
   </th>
   <th rowspan="2" style="width:85px">Total<br>Deducted</th>
   <th rowspan="2" style="width:200px">Documents<br>(Fine / Invoice / LPV)</th>
+  <th rowspan="2" style="width:110px">External ID<br><span style="font-weight:400">(for Excel import)</span></th>
 `;
 headRow2.innerHTML = `
   <th style="width:75px">EID Charges</th><th style="width:80px">UEID Charges</th><th style="width:65px">Fines</th>
@@ -519,6 +637,7 @@ document.getElementById('divisionSubmit').addEventListener('click', async ()=>{
   accessMode = 'division'; lockedDivision = match; divisionTabFilter = match;
   await loadDivisions();
   await loadData();
+  await ensureExternalIdSupport();
   applyAccessUI();
   render();
   rollUpCurtain();
@@ -539,6 +658,7 @@ async function handleSignedIn(){
   accessMode = 'admin'; lockedDivision = null; divisionTabFilter = '';
   await loadDivisions();
   await loadData();
+  await ensureExternalIdSupport();
   applyAccessUI();
   render();
 }
@@ -656,6 +776,7 @@ function rowHtml(row, sl){
   });
   html += `<td class="amt total-col" data-role="totalDeducted">${fmt(totalDeducted)}</td>`;
   html += `<td class="doc-cell">${docCell(row)}${ro ? '' : ` <button type="button" class="red" style="padding:2px 7px;font-size:10.5px;margin-left:4px" data-action="delete-row" data-id="${row.id}" title="Delete this entire deduction row">🗑 Delete Row</button>`}</td>`;
+  html += `<td class="extid-cell">${row.externalId || ''}${row.externalId ? ` <button type="button" class="secondary" data-action="copy-extid" data-id="${row.id}" title="Copy this External ID">⧉ Copy</button>` : ''}</td>`;
   return html;
 }
 
@@ -691,7 +812,7 @@ function render(){
   footHtml += `<td colspan="3"></td>`;
   footHtml += `<td class="amt">${fmt(sumPending)}</td>`;
   MONTHS.forEach(m=> footHtml += `<td class="amt">${fmt(monthSums[m])}</td>`);
-  footHtml += `<td class="amt">${fmt(sumTotalDeducted)}</td><td></td>`;
+  footHtml += `<td class="amt">${fmt(sumTotalDeducted)}</td><td></td><td></td>`;
   footRow.innerHTML = footHtml;
 
   const uniqueCodes = new Set(DATA.map(r=>r.code)).size;
@@ -764,7 +885,7 @@ function refreshFooterAndStats(){
   footHtml += `<td colspan="3"></td>`;
   footHtml += `<td class="amt">${fmt(sumPending)}</td>`;
   MONTHS.forEach(m=> footHtml += `<td class="amt">${fmt(monthSums[m])}</td>`);
-  footHtml += `<td class="amt">${fmt(sumTotalDeducted)}</td><td></td>`;
+  footHtml += `<td class="amt">${fmt(sumTotalDeducted)}</td><td></td><td></td>`;
   footRow.innerHTML = footHtml;
   const uniqueCodes = new Set(DATA.map(r=>r.code)).size;
   statsEl.innerHTML = `
@@ -785,9 +906,16 @@ document.getElementById('btnCarryForward').addEventListener('click', async ()=>{
   if(!confirm(toCarry.length + ' row(s) have a balance greater than zero in ' + currentYear +
     '. Carry their remaining balance forward into ' + nextYear + ' as new rows? Rows already at zero/negative balance will stay closed and will not be carried.')) return;
 
+  const usedThisBatch = []; // tracks IDs assigned within this batch so duplicates for the same code don't collide
   const newDbRows = toCarry.map(r => {
     const bal = rowBalance(r);
     const months = {}; MONTHS.forEach(m => months[m] = '');
+    let newId = genExternalId(r.code);
+    while(usedThisBatch.includes(newId)){
+      const m = newId.match(/^(.*)-(\d+)$/);
+      newId = m ? (m[1] + '-' + String(parseInt(m[2],10)+1).padStart(2,'0')) : (newId + '-2');
+    }
+    usedThisBatch.push(newId);
     return toDb({
       division: r.division, code: r.code, name: r.name,
       refFrom: r.refFrom, refNo: r.refNo, refRemarks: r.refRemarks,
@@ -795,7 +923,8 @@ document.getElementById('btnCarryForward').addEventListener('click', async ()=>{
       ueidCharges: (r.ueidCharges!=='' && r.ueidCharges!=null) ? bal : '',
       fineAmount: (r.fineAmount!=='' && r.fineAmount!=null) ? bal : '',
       pendingDeduction: bal, year: nextYear, months,
-      source: 'Carried forward from ' + currentYear
+      source: 'Carried forward from ' + currentYear,
+      externalId: newId
     });
   });
 
@@ -872,7 +1001,7 @@ function openModal(presets){
 // Open the modal in EDIT mode, pre-filled with an existing row's data
 function openEditModal(row){
   document.getElementById('editId').value = row.id;
-  document.getElementById('modalTitle').textContent = 'Edit / Update — ' + row.code + (row.name ? ' (' + row.name + ')' : '');
+  document.getElementById('modalTitle').textContent = 'Edit / Update — ' + row.code + (row.name ? ' (' + row.name + ')' : '') + (row.externalId ? '  ·  External ID: ' + row.externalId : '');
   document.getElementById('btnSaveRow').textContent = '💾 Save Update';
   document.getElementById('f_code').value = row.code;
   document.getElementById('f_name').value = row.name || '';
@@ -909,6 +1038,20 @@ document.getElementById('f_code').addEventListener('input', (e)=>{
   const divisionField = document.getElementById('f_division');
   if(!divisionField.value){
     divisionField.value = guessDivisionFromCode(e.target.value);
+  }
+});
+
+// Copy an External ID to the clipboard (for pasting into the payment Excel sheet)
+tbody.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-action="copy-extid"]');
+  if(!btn) return;
+  const row = DATA.find(r => r.id === btn.getAttribute('data-id'));
+  if(!row || !row.externalId) return;
+  try{
+    await navigator.clipboard.writeText(row.externalId);
+    showToast('Copied ' + row.externalId, 2000);
+  }catch(e){
+    prompt('Copy this External ID:', row.externalId);
   }
 });
 
@@ -969,7 +1112,8 @@ document.getElementById('btnSaveRow').addEventListener('click', async ()=>{
     year: Number(document.getElementById('f_year').value),
     months,
     docLink: '',
-    source: 'Manual Entry'
+    source: 'Manual Entry',
+    externalId: genExternalId(code)
   };
   const { data, error } = await sb.from('deductions').insert(toDb(row)).select().single();
   if(error){ alert('Could not save: ' + error.message); return; }
@@ -1077,13 +1221,13 @@ docFileInput.addEventListener('change', async ()=>{
 // ---------- Export ----------
 document.getElementById('btnExport').addEventListener('click', ()=>{
   const rows = [];
-  rows.push(['','SL.','Division','Code No.','Employee Name','Balance Deduction','Deduction Type','','','Deduction Remarks','','','Pending Deduction','Year',
+  rows.push(['','SL.','Division','Code No.','Employee Name','External ID','Balance Deduction','Deduction Type','','','Deduction Remarks','','','Pending Deduction','Year',
     'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','Total Deducted','Document Link']);
-  rows.push(['','','','','','','EID Charges','UEID Charges','Fines','Reference from','Reference No.','Reference Type and Remarks','','',
+  rows.push(['','','','','','','','EID Charges','UEID Charges','Fines','Reference from','Reference No.','Reference Type and Remarks','','',
     '','','','','','','','','','','','','','']);
   const visible = DATA.filter(matches);
   visible.forEach((row,i)=>{
-    const line = ['', i+1, row.division||'', row.code, row.name||'', fmt(rowBalance(row)),
+    const line = ['', i+1, row.division||'', row.code, row.name||'', row.externalId||'', fmt(rowBalance(row)),
       row.eidCharges||'', row.ueidCharges||'', row.fineAmount||'',
       row.refFrom||'', row.refNo||'', row.refRemarks||'',
       row.pendingDeduction||'', row.year||''];
@@ -1094,11 +1238,11 @@ document.getElementById('btnExport').addEventListener('click', ()=>{
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!merges'] = [
-    {s:{r:0,c:1},e:{r:1,c:1}}, {s:{r:0,c:2},e:{r:1,c:2}}, {s:{r:0,c:3},e:{r:1,c:3}}, {s:{r:0,c:4},e:{r:1,c:4}}, {s:{r:0,c:5},e:{r:1,c:5}},
-    {s:{r:0,c:6},e:{r:0,c:8}}, {s:{r:0,c:9},e:{r:0,c:11}},
-    {s:{r:0,c:12},e:{r:1,c:12}}, {s:{r:0,c:13},e:{r:1,c:13}}, {s:{r:0,c:26},e:{r:1,c:26}}, {s:{r:0,c:27},e:{r:1,c:27}}
+    {s:{r:0,c:1},e:{r:1,c:1}}, {s:{r:0,c:2},e:{r:1,c:2}}, {s:{r:0,c:3},e:{r:1,c:3}}, {s:{r:0,c:4},e:{r:1,c:4}}, {s:{r:0,c:5},e:{r:1,c:5}}, {s:{r:0,c:6},e:{r:1,c:6}},
+    {s:{r:0,c:7},e:{r:0,c:9}}, {s:{r:0,c:10},e:{r:0,c:12}},
+    {s:{r:0,c:13},e:{r:1,c:13}}, {s:{r:0,c:14},e:{r:1,c:14}}, {s:{r:0,c:27},e:{r:1,c:27}}, {s:{r:0,c:28},e:{r:1,c:28}}
   ];
-  ws['!cols'] = [{wch:2},{wch:5},{wch:12},{wch:10},{wch:22},{wch:11},{wch:10},{wch:11},{wch:8},{wch:16},{wch:12},{wch:34},{wch:11},{wch:6},
+  ws['!cols'] = [{wch:2},{wch:5},{wch:12},{wch:10},{wch:22},{wch:13},{wch:11},{wch:10},{wch:11},{wch:8},{wch:16},{wch:12},{wch:34},{wch:11},{wch:6},
     {wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:11},{wch:30}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Deduction List');
@@ -1120,6 +1264,7 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
     const norm = s => String(s).trim().toLowerCase().replace(/\s+/g,' ');
     const ALIASES = {
       code:      ['code no.','code no','code','employee code'],
+      externalId:['external id','externalid','ext id','ext. id'],
       name:      ['employee name','name'],
       division:  ['division'],
       pending:   ['pending deduction','pending'],
@@ -1134,10 +1279,10 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
       docLink:   ['document link']
     };
 
-    // Find the header row: any row containing a "Code No." style title
-    let hIdx = aoa.findIndex(r => r.some(c => ALIASES.code.includes(norm(c))));
+    // Find the header row: any row containing a "Code No." OR "External ID" style title
+    let hIdx = aoa.findIndex(r => r.some(c => ALIASES.code.includes(norm(c)) || ALIASES.externalId.includes(norm(c))));
     if(hIdx === -1){
-      showImportReport({ fatal: 'Could not find a "Code No." title row in this file.<br>The first row of your Excel must contain the column titles (Code No., Pending Deduction, ...). Nothing was imported.' });
+      showImportReport({ fatal: 'Could not find a "Code No." or "External ID" title row in this file.<br>The first row of your Excel must contain the column titles. Nothing was imported.' });
       return;
     }
     const h1 = aoa[hIdx] || [], h2 = aoa[hIdx+1] || [];
@@ -1161,7 +1306,74 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
     let monthColStart = h1.findIndex(c=>String(c).trim()==='JAN');
     if(monthColStart === -1) monthColStart = h2.findIndex(c=>String(c).trim()==='JAN');
 
-    // ---- Build rows ----
+    // =================================================================================
+    // MODE 1 — UPDATE MODE: sheet has an "External ID" column.
+    // Each fine/charge has its own unique External ID, so this matches the EXACT row
+    // (not just the employee code) and only fills in the month cell(s) given — it can
+    // never land on the wrong fine or overwrite another month by mistake.
+    // =================================================================================
+    if(col.externalId >= 0){
+      const updates = [];      // { row, monthsChanged: {JAN:120,...} }
+      const notFound = [];     // external IDs typed in Excel that don't match any row
+      let blankIds = 0;
+
+      for(let r = dataStart; r < aoa.length; r++){
+        const rowArr = aoa[r];
+        const extId = String(rowArr[col.externalId] || '').trim();
+        if(!extId){
+          if(rowArr.some(c => String(c).trim() !== '')) blankIds++;
+          continue;
+        }
+        const target = DATA.find(x => x.externalId === extId);
+        if(!target){ notFound.push(extId); continue; }
+
+        const monthsChanged = {};
+        MONTHS.forEach((m,i)=>{
+          if(monthColStart < 0) return;
+          const v = rowArr[monthColStart + i];
+          if(v !== '' && v !== null && v !== undefined) monthsChanged[m] = num(v);
+        });
+        if(Object.keys(monthsChanged).length > 0){
+          updates.push({ row: target, monthsChanged });
+        }
+      }
+
+      const found = ['External ID'];
+      if(monthColStart >= 0) found.push('Monthly (JAN–DEC) amounts');
+      const warnings = [];
+      if(blankIds > 0) warnings.push(blankIds + ' row(s) have no External ID and were skipped.');
+      if(monthColStart < 0) warnings.push('No JAN–DEC month columns were found — nothing to update.');
+      if(notFound.length) warnings.push(notFound.length + ' External ID(s) in the file don\'t match any row and will be skipped: ' + notFound.slice(0,15).join(', ') + (notFound.length>15?', ...':''));
+
+      showImportReport({
+        fileName: file.name,
+        headerRow: hIdx + 1,
+        twoRowHeader: nextRowIsSubHeader,
+        modeLabel: 'Monthly Payment Update (matched by External ID)',
+        found, missingRequired: [], warnings, unknown: [],
+        rowCount: updates.length,
+        onConfirm: async ()=>{
+          document.getElementById('saveStatus').textContent = 'Updating ' + updates.length + ' row(s)...';
+          let done = 0;
+          for(const u of updates){
+            Object.assign(u.row.months, u.monthsChanged);
+            const { error } = await sb.from('deductions').update({ months: u.row.months }).eq('id', u.row.id);
+            if(error){ alert('Update stopped at row ' + done + ' (External ID ' + u.row.externalId + '): ' + error.message); break; }
+            done++;
+            document.getElementById('saveStatus').textContent = 'Updated ' + done + ' / ' + updates.length + '...';
+          }
+          render();
+          alert('Updated monthly deductions for ' + done + ' row(s), matched exactly by External ID.' + (notFound.length ? ('\n\n' + notFound.length + ' External ID(s) were not found and were skipped.') : ''));
+        }
+      });
+      return;
+    }
+
+    // =================================================================================
+    // MODE 2 — CREATE MODE (original behavior): no External ID column, so this creates
+    // brand new deduction rows, matched/added by Code No. Each new row gets its own
+    // fresh External ID automatically so it's ready for Mode 1 updates later.
+    // =================================================================================
     const newRows = [];
     let skippedNoCode = 0;
     for(let r = dataStart; r < aoa.length; r++){
@@ -1188,6 +1400,18 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
         months, source: 'Imported'
       });
     }
+    // Assign a unique External ID to every new row, tracking within this batch (plus
+    // existing DATA) so two new rows for the same employee code never collide.
+    const reservedIds = new Set(DATA.map(r => r.externalId).filter(Boolean));
+    newRows.forEach(nr => {
+      let id = genExternalId(nr.code);
+      while(reservedIds.has(id)){
+        const m = id.match(/^(.*)-(\d+)$/);
+        id = m ? (m[1] + '-' + String(parseInt(m[2],10)+1).padStart(2,'0')) : (id + '-2');
+      }
+      nr.externalId = id;
+      reservedIds.add(id);
+    });
 
     // ---- Validation report ("Remarks / Notice") shown BEFORE anything is imported ----
     const found = [], missingRequired = [], warnings = [];
@@ -1199,6 +1423,7 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
     if(col.division < 0) warnings.push('No "Division" column found — division will be blank (you can select it later).');
     if(col.balance >= 0) warnings.push('"Balance Deduction" column found — it is NOT imported. The app calculates Balance automatically (Pending − monthly deductions).');
     if(skippedNoCode > 0) warnings.push(skippedNoCode + ' row(s) have no Code No. and will be skipped.');
+    warnings.push('Each new row will get its own unique External ID automatically, so future monthly-payment imports for these rows can be matched exactly.');
     // Titles in the sheet that the app doesn't recognise
     const allAliases = new Set([].concat(...Object.values(ALIASES)), ...MONTHS.map(m=>m.toLowerCase()), 'sl.', 'sl', 'total deducted', 'deduction type', 'deduction remarks', '');
     const unknown = [...new Set([...h1, ...(nextRowIsSubHeader ? h2 : [])].map(norm).filter(t => t && !allAliases.has(t)))];
@@ -1207,6 +1432,7 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
       fileName: file.name,
       headerRow: hIdx + 1,
       twoRowHeader: nextRowIsSubHeader,
+      modeLabel: 'Create New Deduction Rows',
       found, missingRequired, warnings, unknown,
       rowCount: newRows.length,
       onConfirm: async ()=>{
@@ -1222,7 +1448,7 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
           document.getElementById('saveStatus').textContent = 'Imported ' + imported + ' / ' + newRows.length + '...';
         }
         render();
-        alert('Imported ' + imported + ' rows.');
+        alert('Imported ' + imported + ' rows, each with its own unique External ID.');
       }
     });
   };
@@ -1242,11 +1468,17 @@ function showImportReport(rep){
     html += `<p style="color:var(--danger);font-weight:700">✖ ${rep.fatal}</p>`;
   } else {
     html += `<p><b>File:</b> ${rep.fileName} &nbsp;|&nbsp; <b>Title row:</b> row ${rep.headerRow}${rep.twoRowHeader ? ' (2-row title detected)' : ' (1-row title detected)'}</p>`;
+    if(rep.modeLabel){
+      html += `<p><b>Mode detected:</b> ${rep.modeLabel}</p>`;
+    }
     if(rep.missingRequired.length){
       html += `<p style="color:var(--danger);font-weight:700">✖ Missing required column title(s): ${rep.missingRequired.join(', ')}.<br>Fix the title in Excel and import again. NOTHING was imported.</p>`;
     }
     if(rep.rowCount === 0 && !rep.missingRequired.length){
-      html += `<p style="color:var(--danger);font-weight:700">✖ No data rows with a Code No. were found under the title row. Nothing to import.</p>`;
+      const msg = rep.modeLabel && rep.modeLabel.indexOf('Update') >= 0
+        ? 'No matching External ID rows with a monthly amount were found. Nothing to update.'
+        : 'No data rows with a Code No. were found under the title row. Nothing to import.';
+      html += `<p style="color:var(--danger);font-weight:700">✖ ${msg}</p>`;
     }
     html += `<p style="color:var(--ok,#15803d)">✔ Recognised columns: ${rep.found.join(', ') || '—'}</p>`;
     if(rep.warnings.length){
@@ -1256,7 +1488,8 @@ function showImportReport(rep){
       html += `<p style="color:var(--muted)">Ignored / unrecognised titles: ${rep.unknown.join(', ')}</p>`;
     }
     if(!blocked){
-      html += `<p style="font-weight:700;margin-top:8px">Ready to import ${rep.rowCount} row(s). Continue?</p>`;
+      const verb = rep.modeLabel && rep.modeLabel.indexOf('Update') >= 0 ? 'update' : 'import';
+      html += `<p style="font-weight:700;margin-top:8px">Ready to ${verb} ${rep.rowCount} row(s). Continue?</p>`;
     }
   }
   body.innerHTML = html;
