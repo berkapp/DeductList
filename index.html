@@ -120,6 +120,7 @@
     <label style="display:flex;align-items:center;gap:5px;color:var(--muted);font-size:11px">
       <input type="checkbox" id="onlyBalance" style="width:auto"> Only with balance
     </label>
+    <button class="secondary" id="btnAddDivision">+ Add Division</button>
     <button class="secondary" id="btnImport">⬆ Import Excel</button>
     <input type="file" id="fileInput" accept=".xlsx" style="display:none">
     <input type="file" id="docFileInput" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,application/pdf,image/*" style="display:none">
@@ -196,8 +197,6 @@
     <label>Division</label>
     <select id="f_division">
       <option value=""></option>
-      <option>Cleaning</option><option>Laundry</option><option>Security</option>
-      <option>Landscaping</option><option>Catering</option><option>Maintenance</option>
     </select>
     <label>Deduction Type</label>
     <div class="radio-group">
@@ -223,6 +222,18 @@
     <div class="actions">
       <button class="secondary" id="btnCancel">Cancel</button>
       <button class="green" id="btnSaveRow">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Check (Remarks / Notice) Modal -->
+<div class="modal-overlay" id="importReportOverlay">
+  <div class="modal" style="max-width:560px">
+    <h2 id="importReportTitle">Import Check — Remarks</h2>
+    <div id="importReportBody" style="font-size:12px;line-height:1.7;max-height:55vh;overflow:auto"></div>
+    <div class="actions">
+      <button class="secondary" id="importCancel">Cancel</button>
+      <button class="green" id="importConfirm">✔ Looks Good — Import Now</button>
     </div>
   </div>
 </div>
@@ -337,7 +348,47 @@ headRow2.innerHTML = `
   ${MONTHS.map(m=>`<th style="width:62px">${m}</th>`).join('')}
 `;
 
-const DIVISIONS = ['Cleaning','Laundry','Security','Landscaping','Catering','Maintenance'];
+// Built-in divisions (Transport added). Extra divisions created by Admin via the
+// "+ Add Division" button are stored in the Supabase table `app_divisions` so both PCs see them.
+const BASE_DIVISIONS = ['Cleaning','Laundry','Security','Landscaping','Catering','Maintenance','Transport'];
+let DIVISIONS = [...BASE_DIVISIONS];
+
+function refreshDivisionSelects(){
+  // Add/Edit modal dropdown
+  const sel = document.getElementById('f_division');
+  const keep = sel.value;
+  sel.innerHTML = '<option value=""></option>' + DIVISIONS.map(d=>`<option>${d}</option>`).join('');
+  if(DIVISIONS.includes(keep)) sel.value = keep;
+}
+
+async function loadDivisions(){
+  try{
+    const { data, error } = await sb.from('app_divisions').select('name').order('name');
+    if(!error && data){
+      const extras = data.map(d=>String(d.name).trim()).filter(n=>n && !BASE_DIVISIONS.includes(n));
+      DIVISIONS = [...BASE_DIVISIONS, ...extras];
+    }
+  }catch(e){ /* table not created yet — app still works with built-in divisions */ }
+  refreshDivisionSelects();
+}
+
+document.getElementById('btnAddDivision').addEventListener('click', async ()=>{
+  if(accessMode !== 'admin') return;
+  let name = prompt('New Division name (e.g. Transport, Pest Control):');
+  if(name === null) return;
+  name = name.trim().replace(/\s+/g,' ');
+  if(!name){ alert('Division name cannot be empty.'); return; }
+  // Title Case the first letter of each word for consistency
+  name = name.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  if(DIVISIONS.some(d=>d.toLowerCase() === name.toLowerCase())){ alert('"' + name + '" already exists.'); return; }
+  const { error } = await sb.from('app_divisions').insert({ name });
+  if(error){ alert('Could not save division: ' + error.message + '\n\n(Have you run the app_divisions SQL in Supabase?)'); return; }
+  DIVISIONS.push(name);
+  refreshDivisionSelects();
+  renderDivisionTabs();
+  render();
+  showToast('Division "' + name + '" added. It now appears in tabs and all dropdowns.', 5000);
+});
 
 // ---------- Access mode (Admin vs read-only Division view), backed by Supabase Auth + RLS ----------
 let accessMode = null;      // 'admin' | 'division' — null until signed in
@@ -382,6 +433,7 @@ function applyAccessUI(){
   document.getElementById('btnAdd').style.display = hideAdminOnly ? 'none' : '';
   document.getElementById('btnImport').style.display = hideAdminOnly ? 'none' : '';
   document.getElementById('btnCarryForward').style.display = hideAdminOnly ? 'none' : '';
+  document.getElementById('btnAddDivision').style.display = hideAdminOnly ? 'none' : '';
   updateModeBadge();
   renderDivisionTabs();
 }
@@ -437,7 +489,8 @@ const DIVISION_PASSCODES = {
   'Security': 'security2026',
   'Landscaping': 'landscape2026',
   'Catering': 'catering2026',
-  'Maintenance': 'maint2026'
+  'Maintenance': 'maint2026',
+  'Transport': 'transport2026'
 };
 
 function showToast(msg, ms){
@@ -453,6 +506,7 @@ document.getElementById('divisionSubmit').addEventListener('click', async ()=>{
   if(!match){ document.getElementById('divisionError').textContent = 'Password entered wrong, please try again.'; return; }
   document.getElementById('divisionError').textContent = '';
   accessMode = 'division'; lockedDivision = match; divisionTabFilter = match;
+  await loadDivisions();
   await loadData();
   applyAccessUI();
   render();
@@ -472,6 +526,7 @@ document.getElementById('backToDivision').addEventListener('click', ()=>{
 // ---------- Admin sign in / sign out ----------
 async function handleSignedIn(){
   accessMode = 'admin'; lockedDivision = null; divisionTabFilter = '';
+  await loadDivisions();
   await loadData();
   applyAccessUI();
   render();
@@ -947,69 +1002,165 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
     const wb = XLSX.read(ev.target.result, {type:'array'});
     const ws = wb.Sheets[wb.SheetNames[0]];
     const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-    let hIdx = aoa.findIndex(r => r.some(c => String(c).trim() === 'Code No.'));
-    if(hIdx === -1){ alert('Could not find a "Code No." header row in this file.'); return; }
-    const h1 = aoa[hIdx], h2 = aoa[hIdx+1] || [];
-    const findCol = (label) => {
-      let i = h1.findIndex(c=>String(c).trim()===label);
-      if(i>=0) return i;
-      i = h2.findIndex(c=>String(c).trim()===label);
-      return i;
+
+    // ---- Column title aliases: accepts both the app's own export titles and short Excel titles ----
+    const norm = s => String(s).trim().toLowerCase().replace(/\s+/g,' ');
+    const ALIASES = {
+      code:      ['code no.','code no','code','employee code'],
+      name:      ['employee name','name'],
+      division:  ['division'],
+      pending:   ['pending deduction','pending'],
+      balance:   ['balance deduction','balance'],   // informational only — app calculates balance itself
+      year:      ['year'],
+      eid:       ['eid charges'],
+      ueid:      ['ueid charges'],
+      fine:      ['fines','fine','fine amount'],
+      refFrom:   ['reference from','ref from'],
+      refNo:     ['reference no.','reference no','ref no.','ref no'],
+      refRemarks:['reference type and remarks','type & remarks','type and remarks','remarks'],
+      docLink:   ['document link']
     };
-    const codeCol = findCol('Code No.');
-    const nameCol = findCol('Employee Name');
-    const divisionCol = findCol('Division');
-    const pendingCol = findCol('Pending Deduction');
-    const yearCol = findCol('Year');
-    const eidCol = findCol('EID Charges');
-    const ueidCol = findCol('UEID Charges');
-    const fineCol = findCol('Fines');
-    const refFromCol = findCol('Reference from');
-    const refNoCol = findCol('Reference No.');
-    const refRemarksCol = findCol('Reference Type and Remarks');
-    const docCol = findCol('Document Link');
-    const monthColStart = h1.findIndex(c=>String(c).trim()==='JAN');
+
+    // Find the header row: any row containing a "Code No." style title
+    let hIdx = aoa.findIndex(r => r.some(c => ALIASES.code.includes(norm(c))));
+    if(hIdx === -1){
+      showImportReport({ fatal: 'Could not find a "Code No." title row in this file.<br>The first row of your Excel must contain the column titles (Code No., Pending Deduction, ...). Nothing was imported.' });
+      return;
+    }
+    const h1 = aoa[hIdx] || [], h2 = aoa[hIdx+1] || [];
+
+    const findCol = (aliasList) => {
+      let i = h1.findIndex(c => aliasList.includes(norm(c)));
+      if(i >= 0) return i;
+      return h2.findIndex(c => aliasList.includes(norm(c)));
+    };
+    const col = {};
+    Object.keys(ALIASES).forEach(k => col[k] = findCol(ALIASES[k]));
+
+    // ---- FIX: detect whether the file has a 1-row or 2-row title (old code always
+    // skipped 2 rows, which silently ate the FIRST data row of simple Excel files) ----
+    const SUB_LABELS = new Set(['eid charges','ueid charges','fines','reference from','ref from','reference no.','ref no.','ref no','reference type and remarks','type & remarks', ...MONTHS.map(m=>m.toLowerCase())]);
+    const nextRow = aoa[hIdx+1] || [];
+    const nextRowCode = col.code >= 0 ? String(nextRow[col.code]||'').trim() : '';
+    const nextRowIsSubHeader = !nextRowCode && nextRow.some(c => SUB_LABELS.has(norm(c)));
+    const dataStart = nextRowIsSubHeader ? hIdx + 2 : hIdx + 1;
+
+    let monthColStart = h1.findIndex(c=>String(c).trim()==='JAN');
+    if(monthColStart === -1) monthColStart = h2.findIndex(c=>String(c).trim()==='JAN');
+
+    // ---- Build rows ----
     const newRows = [];
-    for(let r = hIdx+2; r < aoa.length; r++){
+    let skippedNoCode = 0;
+    for(let r = dataStart; r < aoa.length; r++){
       const row = aoa[r];
-      const code = row[codeCol];
-      if(!code) continue;
+      const code = col.code >= 0 ? row[col.code] : '';
+      if(!code || !String(code).trim()){
+        if(row.some(c => String(c).trim() !== '')) skippedNoCode++;
+        continue;
+      }
       const months = {}; MONTHS.forEach((m,i)=> months[m] = (monthColStart>=0 && row[monthColStart+i] !== '') ? num(row[monthColStart+i]) : '');
       newRows.push({
-        division: divisionCol>=0 ? (row[divisionCol]||'') : '',
-        code: String(code),
-        name: row[nameCol]||'',
-        refFrom: refFromCol>=0 ? (row[refFromCol]||'') : '',
-        refNo: refNoCol>=0 ? (row[refNoCol]||'') : '',
-        refRemarks: refRemarksCol>=0 ? (row[refRemarksCol]||'') : '',
-        eidCharges: eidCol>=0 ? (row[eidCol]||'') : '',
-        ueidCharges: ueidCol>=0 ? (row[ueidCol]||'') : '',
-        fineAmount: fineCol>=0 ? (row[fineCol]||'') : '',
-        pendingDeduction: pendingCol>=0 ? (row[pendingCol]||'') : '',
-        year: yearCol>=0 ? (Number(row[yearCol])||2026) : 2026,
-        docLink: docCol>=0 ? (row[docCol]||'') : '',
+        division: col.division>=0 ? (row[col.division]||'') : '',
+        code: String(code).trim(),
+        name: col.name>=0 ? (row[col.name]||'') : '',
+        refFrom: col.refFrom>=0 ? (row[col.refFrom]||'') : '',
+        refNo: col.refNo>=0 ? (row[col.refNo]||'') : '',
+        refRemarks: col.refRemarks>=0 ? (row[col.refRemarks]||'') : '',
+        eidCharges: col.eid>=0 ? (row[col.eid]||'') : '',
+        ueidCharges: col.ueid>=0 ? (row[col.ueid]||'') : '',
+        fineAmount: col.fine>=0 ? (row[col.fine]||'') : '',
+        pendingDeduction: col.pending>=0 ? (row[col.pending]||'') : '',
+        year: col.year>=0 ? (Number(row[col.year])||2026) : 2026,
+        docLink: col.docLink>=0 ? (row[col.docLink]||'') : '',
         months, source: 'Imported'
       });
     }
-    if(newRows.length === 0){ alert('No rows found to import.'); return; }
-    document.getElementById('saveStatus').textContent = 'Importing ' + newRows.length + ' rows...';
-    const CHUNK = 500;
-    let imported = 0;
-    for(let i=0; i<newRows.length; i+=CHUNK){
-      const chunk = newRows.slice(i, i+CHUNK).map(toDb);
-      const { data, error } = await sb.from('deductions').insert(chunk).select();
-      if(error){ alert('Import stopped at row ' + imported + ': ' + error.message); break; }
-      DATA.push(...data.map(fromDb));
-      imported += data.length;
-      document.getElementById('saveStatus').textContent = 'Imported ' + imported + ' / ' + newRows.length + '...';
-    }
-    render();
-    alert('Imported ' + imported + ' rows.');
+
+    // ---- Validation report ("Remarks / Notice") shown BEFORE anything is imported ----
+    const found = [], missingRequired = [], warnings = [];
+    const label = { code:'Code No.', name:'Employee Name', division:'Division', pending:'Pending Deduction', year:'Year', eid:'EID Charges', ueid:'UEID Charges', fine:'Fines', refFrom:'Reference From', refNo:'Reference No.', refRemarks:'Type & Remarks', docLink:'Document Link' };
+    Object.keys(label).forEach(k => { if(col[k] >= 0) found.push(label[k]); });
+    if(col.code < 0) missingRequired.push('Code No.');
+    if(col.pending < 0) missingRequired.push('Pending Deduction');
+    if(col.name < 0) warnings.push('No "Employee Name" column found — names will be blank (you can type them later).');
+    if(col.division < 0) warnings.push('No "Division" column found — division will be blank (you can select it later).');
+    if(col.balance >= 0) warnings.push('"Balance Deduction" column found — it is NOT imported. The app calculates Balance automatically (Pending − monthly deductions).');
+    if(skippedNoCode > 0) warnings.push(skippedNoCode + ' row(s) have no Code No. and will be skipped.');
+    // Titles in the sheet that the app doesn't recognise
+    const allAliases = new Set([].concat(...Object.values(ALIASES)), ...MONTHS.map(m=>m.toLowerCase()), 'sl.', 'sl', 'total deducted', 'deduction type', 'deduction remarks', '');
+    const unknown = [...new Set([...h1, ...(nextRowIsSubHeader ? h2 : [])].map(norm).filter(t => t && !allAliases.has(t)))];
+
+    showImportReport({
+      fileName: file.name,
+      headerRow: hIdx + 1,
+      twoRowHeader: nextRowIsSubHeader,
+      found, missingRequired, warnings, unknown,
+      rowCount: newRows.length,
+      onConfirm: async ()=>{
+        document.getElementById('saveStatus').textContent = 'Importing ' + newRows.length + ' rows...';
+        const CHUNK = 500;
+        let imported = 0;
+        for(let i=0; i<newRows.length; i+=CHUNK){
+          const chunk = newRows.slice(i, i+CHUNK).map(toDb);
+          const { data, error } = await sb.from('deductions').insert(chunk).select();
+          if(error){ alert('Import stopped at row ' + imported + ': ' + error.message); break; }
+          DATA.push(...data.map(fromDb));
+          imported += data.length;
+          document.getElementById('saveStatus').textContent = 'Imported ' + imported + ' / ' + newRows.length + '...';
+        }
+        render();
+        alert('Imported ' + imported + ' rows.');
+      }
+    });
   };
   reader.readAsArrayBuffer(file);
   e.target.value = '';
 });
 
+// ---- Import Check modal (Remarks / Notice before import) ----
+let importConfirmHandler = null;
+function showImportReport(rep){
+  const body = document.getElementById('importReportBody');
+  const confirmBtn = document.getElementById('importConfirm');
+  let html = '';
+  const blocked = !!rep.fatal || (rep.missingRequired && rep.missingRequired.length > 0) || rep.rowCount === 0;
+
+  if(rep.fatal){
+    html += `<p style="color:var(--danger);font-weight:700">✖ ${rep.fatal}</p>`;
+  } else {
+    html += `<p><b>File:</b> ${rep.fileName} &nbsp;|&nbsp; <b>Title row:</b> row ${rep.headerRow}${rep.twoRowHeader ? ' (2-row title detected)' : ' (1-row title detected)'}</p>`;
+    if(rep.missingRequired.length){
+      html += `<p style="color:var(--danger);font-weight:700">✖ Missing required column title(s): ${rep.missingRequired.join(', ')}.<br>Fix the title in Excel and import again. NOTHING was imported.</p>`;
+    }
+    if(rep.rowCount === 0 && !rep.missingRequired.length){
+      html += `<p style="color:var(--danger);font-weight:700">✖ No data rows with a Code No. were found under the title row. Nothing to import.</p>`;
+    }
+    html += `<p style="color:var(--ok,#15803d)">✔ Recognised columns: ${rep.found.join(', ') || '—'}</p>`;
+    if(rep.warnings.length){
+      html += `<p style="color:#b45309"><b>⚠ Remarks:</b></p><ul style="margin:4px 0 8px 18px;color:#b45309">` + rep.warnings.map(w=>`<li>${w}</li>`).join('') + `</ul>`;
+    }
+    if(rep.unknown && rep.unknown.length){
+      html += `<p style="color:var(--muted)">Ignored / unrecognised titles: ${rep.unknown.join(', ')}</p>`;
+    }
+    if(!blocked){
+      html += `<p style="font-weight:700;margin-top:8px">Ready to import ${rep.rowCount} row(s). Continue?</p>`;
+    }
+  }
+  body.innerHTML = html;
+  confirmBtn.style.display = blocked ? 'none' : '';
+  importConfirmHandler = blocked ? null : rep.onConfirm;
+  document.getElementById('importReportOverlay').classList.add('show');
+}
+document.getElementById('importCancel').addEventListener('click', ()=>{
+  document.getElementById('importReportOverlay').classList.remove('show');
+  importConfirmHandler = null;
+});
+document.getElementById('importConfirm').addEventListener('click', async ()=>{
+  document.getElementById('importReportOverlay').classList.remove('show');
+  if(importConfirmHandler){ const fn = importConfirmHandler; importConfirmHandler = null; await fn(); }
+});
+
+refreshDivisionSelects();
 applyAccessUI();
 render();
 </script>
