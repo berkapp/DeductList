@@ -642,7 +642,7 @@ function rowHtml(row, sl){
       : `<td class="amt"><input data-id="${row.id}" data-field="month:${m}" value="${v===''||v==null?'':v}"></td>`;
   });
   html += `<td class="amt total-col" data-role="totalDeducted">${fmt(totalDeducted)}</td>`;
-  html += `<td class="doc-cell">${docCell(row)}</td>`;
+  html += `<td class="doc-cell">${docCell(row)}${ro ? '' : ` <button type="button" class="red" style="padding:2px 7px;font-size:10.5px;margin-left:4px" data-action="delete-row" data-id="${row.id}" title="Delete this entire deduction row">🗑 Delete Row</button>`}</td>`;
   return html;
 }
 
@@ -922,6 +922,29 @@ tbody.addEventListener('click', async (e)=>{
   row.docLink = '';
   await sb.from('deductions').update({ doc_link: null }).eq('id', row.id);
   document.getElementById('saveStatus').textContent = 'Document deleted ' + new Date().toLocaleTimeString();
+  render();
+});
+
+// ---- Delete an entire deduction row (Admin only) ----
+tbody.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-action="delete-row"]');
+  if(!btn) return;
+  if(accessMode !== 'admin') return;
+  const row = DATA.find(r => r.id === btn.getAttribute('data-id'));
+  if(!row) return;
+  const who = row.code + (row.name ? ' — ' + row.name : '');
+  if(!confirm('Delete the ENTIRE row for ' + who + '?\n\nPending: ' + fmt(row.pendingDeduction) + '  |  Balance: ' + fmt(rowBalance(row)) + '\n\nThis removes it from Supabase for BOTH PCs.')) return;
+  if(!confirm('Are you sure? This CANNOT be undone.')) return;
+  // remove any attached document from storage so it doesn't pile up
+  if(row.docLink){
+    const path = storagePathFromUrl(row.docLink);
+    if(path){ await sb.storage.from(DOC_BUCKET).remove([path]); }
+  }
+  const { error } = await sb.from('deductions').delete().eq('id', row.id);
+  if(error){ alert('Delete failed: ' + error.message); return; }
+  DATA = DATA.filter(r => r.id !== row.id);
+  document.getElementById('saveStatus').textContent = 'Row deleted ' + new Date().toLocaleTimeString();
+  showToast('Deleted row for ' + who, 4000);
   render();
 });
 
