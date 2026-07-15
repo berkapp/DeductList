@@ -83,31 +83,33 @@
 
   tbody td:nth-child(2) select{width:100%;padding:2px 3px;font-size:9.5px}
 
-  /* ---- Excel-style FREEZE: first 5 columns stay fixed while scrolling right ---- */
-  /* Fixed widths so the left offsets line up exactly */
+  /* ---- Excel-style FREEZE: first 6 columns stay fixed while scrolling right ---- */
+  /* Col order: 1=SL, 2=ExtID, 3=Division, 4=Code, 5=Name, 6=Balance */
   thead tr.r1 th:nth-child(1), tbody td:nth-child(1){width:36px;min-width:36px;max-width:36px}
-  thead tr.r1 th:nth-child(2), tbody td:nth-child(2){width:112px;min-width:112px;max-width:112px}
-  thead tr.r1 th:nth-child(3), tbody td:nth-child(3){width:80px;min-width:80px;max-width:80px}
-  thead tr.r1 th:nth-child(4), tbody td:nth-child(4){width:152px;min-width:152px;max-width:152px}
-  thead tr.r1 th:nth-child(5), tbody td:nth-child(5){width:92px;min-width:92px;max-width:92px}
+  thead tr.r1 th:nth-child(2), tbody td:nth-child(2){width:100px;min-width:100px;max-width:100px}
+  thead tr.r1 th:nth-child(3), tbody td:nth-child(3){width:112px;min-width:112px;max-width:112px}
+  thead tr.r1 th:nth-child(4), tbody td:nth-child(4){width:80px;min-width:80px;max-width:80px}
+  thead tr.r1 th:nth-child(5), tbody td:nth-child(5){width:152px;min-width:152px;max-width:152px}
+  thead tr.r1 th:nth-child(6), tbody td:nth-child(6){width:92px;min-width:92px;max-width:92px}
 
-  tbody td:nth-child(-n+5){position:sticky;z-index:3}
+  tbody td:nth-child(-n+6){position:sticky;z-index:3}
   tbody td:nth-child(1){left:0}
   tbody td:nth-child(2){left:36px}
-  tbody td:nth-child(3){left:148px}
-  tbody td:nth-child(4){left:228px}
-  tbody td:nth-child(5){left:380px;box-shadow:2px 0 0 #333}
+  tbody td:nth-child(3){left:136px}
+  tbody td:nth-child(4){left:248px}
+  tbody td:nth-child(5){left:328px}
+  tbody td:nth-child(6){left:480px;box-shadow:2px 0 0 #333}
 
-  thead tr.r1 th:nth-child(-n+5){z-index:8}
+  thead tr.r1 th:nth-child(-n+6){z-index:8}
   thead tr.r1 th:nth-child(1){left:0}
   thead tr.r1 th:nth-child(2){left:36px}
-  thead tr.r1 th:nth-child(3){left:148px}
-  thead tr.r1 th:nth-child(4){left:228px}
-  thead tr.r1 th:nth-child(5){left:380px;box-shadow:2px 0 0 #333}
+  thead tr.r1 th:nth-child(3){left:136px}
+  thead tr.r1 th:nth-child(4){left:248px}
+  thead tr.r1 th:nth-child(5){left:328px}
+  thead tr.r1 th:nth-child(6){left:480px;box-shadow:2px 0 0 #333}
 
-  tfoot td:nth-child(1){left:0;z-index:7}
-  tfoot td:nth-child(2){left:380px;z-index:7;box-shadow:2px 0 0 #333}
-  tfoot td:nth-child(-n+2){position:sticky}
+  tfoot td:nth-child(1){left:0;z-index:7;position:sticky}
+  tfoot td:nth-child(2){left:480px;z-index:7;box-shadow:2px 0 0 #333;position:sticky}
   td input{background:transparent;border:1px solid transparent;color:#000;width:100%;padding:1px 3px;border-radius:2px;font-size:9.5px}
   td input:focus{background:#fff;border-color:var(--accent)}
   td.name-cell input{min-width:110px}
@@ -182,12 +184,13 @@
   <div class="tabs" id="divisionTabs"></div>
   <div class="toolbar">
     <button class="green" id="btnAdd">+ Add Deduction</button>
-    <input type="text" id="search" placeholder="Search code, name, remarks, ref...">
+    <input type="text" id="search" placeholder="Search External ID, code, name, remarks, ref...">
     <select id="monthFilter"><option value="">All Months</option></select>
     <button class="secondary" id="btnCarryForward">→ Carry Forward Unpaid to Next Year</button>
     <label style="display:flex;align-items:center;gap:5px;color:var(--muted);font-size:11px">
       <input type="checkbox" id="onlyBalance" style="width:auto"> Only with balance
     </label>
+    <button class="green" id="btnPayByExtId" style="background:#d97706">⚡ Pay by External ID</button>
     <button class="secondary" id="btnAddDivision">+ Add Division</button>
     <button class="secondary" id="btnImport">⬆ Import Excel</button>
     <input type="file" id="fileInput" accept=".xlsx" style="display:none">
@@ -260,7 +263,7 @@
 </div>
 <div class="footer-note">
   Data autosaves to this browser (localStorage) as you type or add/delete rows. Monthly JAN–DEC figures start blank — enter them yourself as deductions actually happen. Pending Deduction = amount owed at creation. Total Deducted = sum of JAN–DEC entered so far. Balance Deduction = Pending Deduction − Total Deducted.
-  <br><b>External ID:</b> every fine/charge row has its own unique External ID (last column). Export to Excel, fill in the monthly payment amount next to the correct External ID, then Import that file back — the app matches each amount to the exact row by its External ID, so it can never land on the wrong month or the wrong fine.
+  <br><b>External ID:</b> every fine/charge row has its own unique External ID (shown as the 2nd column). It identifies that specific fine/charge permanently — not just for Excel import. To post a payment directly: click <b>⚡ Pay by External ID</b> in the toolbar, enter the ID, choose the month, and enter the amount — it will go to that exact row only. For bulk entry: export to Excel, fill in monthly amounts next to the correct External IDs, then import back — the app matches by External ID so it can never land on the wrong fine.
 </div>
 
 <!-- Add/Edit Modal -->
@@ -300,6 +303,32 @@
     <div class="actions">
       <button class="secondary" id="btnCancel">Cancel</button>
       <button class="green" id="btnSaveRow">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pay by External ID Modal -->
+<div class="modal-overlay" id="payByExtIdOverlay">
+  <div class="modal" style="max-width:420px">
+    <h2 style="color:#92400e">⚡ Enter Payment by External ID</h2>
+    <p style="color:var(--muted);font-size:11px;margin-top:0">Enter the unique External ID of the fine/charge row you want to record a payment against. The amount will be posted to the selected month only.</p>
+    <label>External ID <span style="color:var(--danger)">*</span></label>
+    <input type="text" id="pay_extId" placeholder="e.g. C6637-02" style="text-transform:uppercase">
+    <div id="pay_preview" style="background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:8px 10px;font-size:11px;margin-top:6px;display:none"></div>
+    <div class="row2" style="margin-top:10px">
+      <div>
+        <label>Month <span style="color:var(--danger)">*</span></label>
+        <select id="pay_month">${MONTHS.map(m=>`<option value="${m}">${m}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label>Amount (AED) <span style="color:var(--danger)">*</span></label>
+        <input type="number" step="0.01" id="pay_amount" placeholder="0.00">
+      </div>
+    </div>
+    <p id="pay_error" style="color:var(--danger);font-size:11px;min-height:14px;margin-top:6px"></p>
+    <div class="actions">
+      <button class="secondary" id="payCancel">Cancel</button>
+      <button class="green" id="paySave">✔ Save Payment</button>
     </div>
   </div>
 </div>
@@ -461,6 +490,7 @@ let currentYear = 2026;
 
 headRow1.innerHTML = `
   <th rowspan="2" style="width:34px">SL</th>
+  <th rowspan="2" style="width:98px;background:#fff8e1;border-bottom:2px solid #f59e0b">External ID<br><span style="font-weight:400;color:#92400e;font-size:8.5px">Unique Fine/Charge ID</span></th>
   <th rowspan="2" style="width:110px">Division</th>
   <th rowspan="2" style="width:78px">Code No.</th>
   <th rowspan="2" style="width:150px">Employee Name</th>
@@ -476,7 +506,6 @@ headRow1.innerHTML = `
   </th>
   <th rowspan="2" style="width:85px">Total<br>Deducted</th>
   <th rowspan="2" style="width:200px">Documents<br>(Fine / Invoice / LPV)</th>
-  <th rowspan="2" style="width:110px">External ID<br><span style="font-weight:400">(for Excel import)</span></th>
 `;
 headRow2.innerHTML = `
   <th style="width:75px">EID Charges</th><th style="width:80px">UEID Charges</th><th style="width:65px">Fines</th>
@@ -668,10 +697,19 @@ document.getElementById('loginSubmit').addEventListener('click', async ()=>{
   let username = document.getElementById('loginEmail').value.trim().toLowerCase();
   const email = username.includes('@') ? username : (username + LOGIN_DOMAIN);
   const password = document.getElementById('loginPassword').value.toLowerCase();
+  const btn = document.getElementById('loginSubmit');
   document.getElementById('loginError').textContent = '';
+  btn.textContent = '⏳ Signing in...';
+  btn.disabled = true;
   const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Sign In';
+  btn.disabled = false;
   if(error){ document.getElementById('loginError').textContent = 'Password entered wrong, please try again.'; return; }
+  btn.textContent = '✔ Loading data...';
+  btn.disabled = true;
   await handleSignedIn();
+  btn.textContent = 'Sign In';
+  btn.disabled = false;
   rollUpCurtain();
 });
 
@@ -691,9 +729,8 @@ document.getElementById('btnAccess').addEventListener('click', async ()=>{
 });
 
 // Always ask for the password on every page open — never auto-resume a previous session
-(async ()=>{
-  await sb.auth.signOut();
-})();
+// Fire-and-forget: don't await this — it was blocking the login button for 25-50s
+sb.auth.signOut();
 
 
 
@@ -722,7 +759,7 @@ function rowBalance(row){
 function matches(row){
   const q = searchEl.value.trim().toLowerCase();
   if(q){
-    const hay = [row.code,row.name,row.refRemarks,row.refNo,row.refFrom].join(' ').toLowerCase();
+    const hay = [row.code,row.name,row.refRemarks,row.refNo,row.refFrom,row.externalId].join(' ').toLowerCase();
     if(hay.indexOf(q)===-1) return false;
   }
   if(currentYear !== 0 && Number(row.year) !== currentYear) return false;
@@ -752,6 +789,8 @@ function rowHtml(row, sl){
   const balance = rowBalance(row);
   const ro = isReadOnly();
   let html = `<td>${sl}</td>`;
+  // External ID — col 2 (first visible identity column)
+  html += `<td class="extid-cell" style="background:#fffbeb">${row.externalId || '<span style="color:#ccc">—</span>'}${row.externalId ? ` <button type="button" class="secondary" data-action="copy-extid" data-id="${row.id}" title="Copy External ID to clipboard">⧉</button>` : ''}</td>`;
   html += ro
     ? `<td>${row.division||''}</td>`
     : `<td><select data-id="${row.id}" data-field="division"><option value=""></option>${DIVISIONS.map(d=>`<option ${d===row.division?'selected':''}>${d}</option>`).join('')}</select></td>`;
@@ -776,7 +815,6 @@ function rowHtml(row, sl){
   });
   html += `<td class="amt total-col" data-role="totalDeducted">${fmt(totalDeducted)}</td>`;
   html += `<td class="doc-cell">${docCell(row)}${ro ? '' : ` <button type="button" class="red" style="padding:2px 7px;font-size:10.5px;margin-left:4px" data-action="delete-row" data-id="${row.id}" title="Delete this entire deduction row">🗑 Delete Row</button>`}</td>`;
-  html += `<td class="extid-cell">${row.externalId || ''}${row.externalId ? ` <button type="button" class="secondary" data-action="copy-extid" data-id="${row.id}" title="Copy this External ID">⧉ Copy</button>` : ''}</td>`;
   return html;
 }
 
@@ -806,7 +844,7 @@ function render(){
   });
   tbody.appendChild(frag);
 
-  let footHtml = `<td colspan="4" style="text-align:right;padding-right:8px">TOTALS (${sl})</td>`;
+  let footHtml = `<td colspan="5" style="text-align:right;padding-right:8px">TOTALS (${sl})</td>`;
   footHtml += `<td class="amt">${fmt(sumBal)}</td>`;
   footHtml += `<td class="amt">${fmt(sumEid)}</td><td class="amt">${fmt(sumUeid)}</td><td class="amt">${fmt(sumFine)}</td>`;
   footHtml += `<td colspan="3"></td>`;
@@ -879,7 +917,7 @@ function refreshFooterAndStats(){
     sumTotalDeducted += rowTotalDeducted(row);
     MONTHS.forEach(m=> monthSums[m] += num(row.months[m]));
   });
-  let footHtml = `<td colspan="4" style="text-align:right;padding-right:8px">TOTALS (${sl})</td>`;
+  let footHtml = `<td colspan="5" style="text-align:right;padding-right:8px">TOTALS (${sl})</td>`;
   footHtml += `<td class="amt">${fmt(sumBal)}</td>`;
   footHtml += `<td class="amt">${fmt(sumEid)}</td><td class="amt">${fmt(sumUeid)}</td><td class="amt">${fmt(sumFine)}</td>`;
   footHtml += `<td colspan="3"></td>`;
@@ -1221,13 +1259,14 @@ docFileInput.addEventListener('change', async ()=>{
 // ---------- Export ----------
 document.getElementById('btnExport').addEventListener('click', ()=>{
   const rows = [];
-  rows.push(['','SL.','Division','Code No.','Employee Name','External ID','Balance Deduction','Deduction Type','','','Deduction Remarks','','','Pending Deduction','Year',
+  // Col order matches screen: SL | External ID | Division | Code | Name | Balance | DeducType(3) | Remarks(3) | Pending | Year | JAN-DEC | Total | DocLink
+  rows.push(['','SL.','External ID','Division','Code No.','Employee Name','Balance Deduction','Deduction Type','','','Deduction Remarks','','','Pending Deduction','Year',
     'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','Total Deducted','Document Link']);
   rows.push(['','','','','','','','EID Charges','UEID Charges','Fines','Reference from','Reference No.','Reference Type and Remarks','','',
     '','','','','','','','','','','','','','']);
   const visible = DATA.filter(matches);
   visible.forEach((row,i)=>{
-    const line = ['', i+1, row.division||'', row.code, row.name||'', row.externalId||'', fmt(rowBalance(row)),
+    const line = ['', i+1, row.externalId||'', row.division||'', row.code, row.name||'', fmt(rowBalance(row)),
       row.eidCharges||'', row.ueidCharges||'', row.fineAmount||'',
       row.refFrom||'', row.refNo||'', row.refRemarks||'',
       row.pendingDeduction||'', row.year||''];
@@ -1242,7 +1281,7 @@ document.getElementById('btnExport').addEventListener('click', ()=>{
     {s:{r:0,c:7},e:{r:0,c:9}}, {s:{r:0,c:10},e:{r:0,c:12}},
     {s:{r:0,c:13},e:{r:1,c:13}}, {s:{r:0,c:14},e:{r:1,c:14}}, {s:{r:0,c:27},e:{r:1,c:27}}, {s:{r:0,c:28},e:{r:1,c:28}}
   ];
-  ws['!cols'] = [{wch:2},{wch:5},{wch:12},{wch:10},{wch:22},{wch:13},{wch:11},{wch:10},{wch:11},{wch:8},{wch:16},{wch:12},{wch:34},{wch:11},{wch:6},
+  ws['!cols'] = [{wch:2},{wch:5},{wch:13},{wch:12},{wch:10},{wch:22},{wch:11},{wch:10},{wch:11},{wch:8},{wch:16},{wch:12},{wch:34},{wch:11},{wch:6},
     {wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:11},{wch:30}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Deduction List');
@@ -1504,6 +1543,75 @@ document.getElementById('importCancel').addEventListener('click', ()=>{
 document.getElementById('importConfirm').addEventListener('click', async ()=>{
   document.getElementById('importReportOverlay').classList.remove('show');
   if(importConfirmHandler){ const fn = importConfirmHandler; importConfirmHandler = null; await fn(); }
+});
+
+// ---------- Pay by External ID ----------
+const payOverlay = document.getElementById('payByExtIdOverlay');
+const payExtIdInput = document.getElementById('pay_extId');
+const payPreview = document.getElementById('pay_preview');
+const payError = document.getElementById('pay_error');
+
+document.getElementById('btnPayByExtId').addEventListener('click', ()=>{
+  if(accessMode !== 'admin') return;
+  payExtIdInput.value = '';
+  document.getElementById('pay_amount').value = '';
+  payPreview.style.display = 'none';
+  payError.textContent = '';
+  // default month to current calendar month
+  const monthNow = MONTHS[new Date().getMonth()];
+  document.getElementById('pay_month').value = monthNow;
+  payOverlay.classList.add('show');
+  payExtIdInput.focus();
+});
+
+payExtIdInput.addEventListener('input', ()=>{
+  const extId = payExtIdInput.value.trim().toUpperCase();
+  payExtIdInput.value = extId;
+  payError.textContent = '';
+  if(!extId){ payPreview.style.display='none'; return; }
+  const row = DATA.find(r => r.externalId === extId);
+  if(!row){
+    payPreview.style.display='none';
+    payError.textContent = 'No row found with External ID "' + extId + '". Check and try again.';
+    return;
+  }
+  const bal = rowBalance(row);
+  payPreview.innerHTML = `
+    <b>${row.code}</b>${row.name ? ' — ' + row.name : ''} &nbsp;|&nbsp; ${row.division||''}<br>
+    <span style="color:#15803d">Pending: AED ${fmt(row.pendingDeduction)} &nbsp;|&nbsp; Balance remaining: AED ${fmt(bal)}</span><br>
+    ${row.refRemarks ? '<span style="color:#555">Remarks: ' + row.refRemarks + '</span>' : ''}
+  `;
+  payPreview.style.display = 'block';
+});
+
+document.getElementById('payCancel').addEventListener('click', ()=> payOverlay.classList.remove('show'));
+payOverlay.addEventListener('click', e=>{ if(e.target===payOverlay) payOverlay.classList.remove('show'); });
+
+document.getElementById('paySave').addEventListener('click', async ()=>{
+  const extId = payExtIdInput.value.trim().toUpperCase();
+  const month = document.getElementById('pay_month').value;
+  const amount = document.getElementById('pay_amount').value.trim();
+  payError.textContent = '';
+
+  if(!extId){ payError.textContent = 'External ID is required.'; return; }
+  if(!amount || isNaN(Number(amount))){ payError.textContent = 'Please enter a valid amount.'; return; }
+
+  const row = DATA.find(r => r.externalId === extId);
+  if(!row){ payError.textContent = 'External ID not found.'; return; }
+
+  const prev = row.months[month];
+  if(prev !== '' && prev !== null && prev !== undefined){
+    if(!confirm(`${month} already has AED ${fmt(prev)} recorded for this row.\n\nReplace it with AED ${fmt(Number(amount))}?`)) return;
+  }
+
+  row.months[month] = num(amount);
+  const { error } = await sb.from('deductions').update({ months: row.months }).eq('id', row.id);
+  if(error){ payError.textContent = 'Save failed: ' + error.message; return; }
+
+  payOverlay.classList.remove('show');
+  document.getElementById('saveStatus').textContent = 'Payment saved ' + new Date().toLocaleTimeString();
+  showToast(`✔ AED ${fmt(num(amount))} posted to ${extId} — ${month}`, 4000);
+  render();
 });
 
 refreshDivisionSelects();
