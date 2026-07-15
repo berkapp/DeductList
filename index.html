@@ -411,13 +411,14 @@ function fromDb(r){
 // another one of their rows when importing monthly payments from Excel.
 function genExternalId(code){
   const base = String(code || '').trim().toUpperCase() || 'ROW';
-  let maxN = 0;
-  DATA.forEach(r=>{
-    if(!r.externalId) return;
-    const m = r.externalId.match(new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '-(\\d+)$'));
-    if(m) maxN = Math.max(maxN, parseInt(m[1], 10));
-  });
-  return base + '-' + String(maxN + 1).padStart(2, '0');
+  // Collect ALL existing IDs for this base code (including -X variants from duplicate fix)
+  const taken = new Set(
+    DATA.map(r => (r.externalId || '').toUpperCase()).filter(id => id.startsWith(base + '-'))
+  );
+  // Find next sequential number not already taken in any form
+  let n = 1;
+  while(taken.has(base + '-' + String(n).padStart(2, '0'))) n++;
+  return base + '-' + String(n).padStart(2, '0');
 }
 
 // Detect whether Supabase already has the external_id column, and silently backfill
@@ -1153,9 +1154,24 @@ document.getElementById('btnSaveRow').addEventListener('click', async ()=>{
     source: 'Manual Entry',
     externalId: genExternalId(code)
   };
-  const { data, error } = await sb.from('deductions').insert(toDb(row)).select().single();
-  if(error){ alert('Could not save: ' + error.message); return; }
-  DATA.unshift(fromDb(data));
+  // Auto-retry up to 5 times if Supabase rejects due to duplicate external_id
+  // (can happen if DB has IDs not yet loaded in DATA, e.g. -X2 variants from duplicate fix)
+  let saved = null, saveError = null;
+  for(let attempt = 0; attempt < 5; attempt++){
+    const { data: d, error: e } = await sb.from('deductions').insert(toDb(row)).select().single();
+    if(!e){ saved = d; break; }
+    if(e.code === '23505'){ // unique constraint violation — try next ID
+      const base = String(code).trim().toUpperCase();
+      const taken = new Set(DATA.map(r=>(r.externalId||'').toUpperCase()).filter(id=>id.startsWith(base+'-')));
+      taken.add(row.externalId.toUpperCase());
+      let n = 1;
+      while(taken.has(base+'-'+String(n).padStart(2,'0'))) n++;
+      row.externalId = base+'-'+String(n).padStart(2,'0');
+    } else { saveError = e; break; }
+  }
+  if(saveError){ alert('Could not save: ' + saveError.message); return; }
+  if(!saved){ alert('Could not save: duplicate ID conflict. Please try again.'); return; }
+  DATA.unshift(fromDb(saved));
   render();
   modalOpenSnapshot = modalSnapshot();
   overlay.classList.remove('show');
