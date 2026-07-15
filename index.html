@@ -1342,8 +1342,35 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
     const nextRowIsSubHeader = !nextRowCode && nextRow.some(c => SUB_LABELS.has(norm(c)));
     const dataStart = nextRowIsSubHeader ? hIdx + 2 : hIdx + 1;
 
-    let monthColStart = h1.findIndex(c=>String(c).trim()==='JAN');
-    if(monthColStart === -1) monthColStart = h2.findIndex(c=>String(c).trim()==='JAN');
+    // Month column detection — accepts many formats:
+    // 'JAN', 'Jan', 'jan', 'Jan-26', 'Jan 26', 'January', 'APR-26', 'Apr-26' etc.
+    // Strategy: find whichever column header matches any month name/abbreviation,
+    // then treat that as the start of the 12-month block.
+    const MONTH_VARIANTS = {};
+    MONTHS.forEach((m,i)=>{
+      // e.g. for APR: ['apr', 'april', 'apr-24','apr-25','apr-26','apr-27','apr-28','apr 24','apr 25','apr 26','apr 27','apr 28']
+      const abbr = m.toLowerCase();
+      const full = ['january','february','march','april','may','june','july','august','september','october','november','december'][i];
+      const variants = [abbr, full];
+      [24,25,26,27,28].forEach(y=>{ variants.push(abbr+'-'+y); variants.push(abbr+' '+y); variants.push(abbr+'-20'+y); variants.push(abbr+' 20'+y); });
+      MONTH_VARIANTS[m] = variants;
+    });
+
+    function findMonthCol(headerRow, monthName){
+      return headerRow.findIndex(c => MONTH_VARIANTS[monthName] && MONTH_VARIANTS[monthName].includes(String(c).trim().toLowerCase()));
+    }
+
+    // Build a per-month column map (each month can be anywhere — not required to be consecutive)
+    // First try h1, then h2
+    const monthColMap = {}; // { JAN: colIndex, FEB: colIndex, ... }
+    MONTHS.forEach(m=>{
+      let idx = findMonthCol(h1, m);
+      if(idx === -1) idx = findMonthCol(h2, m);
+      if(idx >= 0) monthColMap[m] = idx;
+    });
+    const monthColStart = h1.findIndex(c=>String(c).trim()==='JAN') !== -1
+      ? h1.findIndex(c=>String(c).trim()==='JAN')
+      : h2.findIndex(c=>String(c).trim()==='JAN'); // kept for legacy CREATE mode
 
     // =================================================================================
     // MODE 1 — UPDATE MODE: sheet has an "External ID" column.
@@ -1363,13 +1390,16 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
           if(rowArr.some(c => String(c).trim() !== '')) blankIds++;
           continue;
         }
-        const target = DATA.find(x => x.externalId === extId);
+        // Case-insensitive External ID match (Excel may have lowercase, app stores uppercase)
+        const extIdNorm = extId.toUpperCase();
+        const target = DATA.find(x => (x.externalId || '').toUpperCase() === extIdNorm);
         if(!target){ notFound.push(extId); continue; }
 
         const monthsChanged = {};
-        MONTHS.forEach((m,i)=>{
-          if(monthColStart < 0) return;
-          const v = rowArr[monthColStart + i];
+        MONTHS.forEach((m)=>{
+          const ci = monthColMap[m];
+          if(ci === undefined) return;
+          const v = rowArr[ci];
           if(v !== '' && v !== null && v !== undefined) monthsChanged[m] = num(v);
         });
         if(Object.keys(monthsChanged).length > 0){
@@ -1378,10 +1408,11 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
       }
 
       const found = ['External ID'];
-      if(monthColStart >= 0) found.push('Monthly (JAN–DEC) amounts');
+      const foundMonths = MONTHS.filter(m => monthColMap[m] !== undefined);
+      if(foundMonths.length > 0) found.push('Monthly amounts (' + foundMonths.join(', ') + ')');
       const warnings = [];
       if(blankIds > 0) warnings.push(blankIds + ' row(s) have no External ID and were skipped.');
-      if(monthColStart < 0) warnings.push('No JAN–DEC month columns were found — nothing to update.');
+      if(foundMonths.length === 0) warnings.push('No month columns were found — nothing to update. Column must be named JAN, APR, Apr-26, April etc.');
       if(notFound.length) warnings.push(notFound.length + ' External ID(s) in the file don\'t match any row and will be skipped: ' + notFound.slice(0,15).join(', ') + (notFound.length>15?', ...':''));
 
       showImportReport({
