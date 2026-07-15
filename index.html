@@ -98,84 +98,10 @@
   .mode-admin{background:#dcfce7;color:#166534}
   .mode-division{background:#fef3c7;color:#92400e}
 
-  /* ---------- Login screen: desk flags (German + Indian) on a table, cloudy blurred sky ---------- */
-  #loginOverlay{ background:transparent; justify-content:flex-start; align-items:center; padding-left:26px; }
-  .curtain-wrap{
-    position:absolute; inset:0; overflow:hidden; z-index:1;
-    background:linear-gradient(180deg,#aebfca 0%,#c6d3da 40%,#dde5e9 75%,#e8edf0 100%);
-    transition:opacity 1.1s ease;
-  }
-  .curtain-wrap.rolling{ opacity:0; }
-
-  /* soft blurred clouds drifting across the sky */
-  .cloud{
-    position:absolute; left:0; background:#ffffff; border-radius:50%;
-    filter:blur(26px); opacity:.6;
-    animation:cloudDrift linear infinite;
-  }
-  @keyframes cloudDrift{
-    from{ transform:translateX(-35vw); }
-    to  { transform:translateX(135vw); }
-  }
-
-  /* wooden table surface */
-  .table-top{
-    position:absolute; left:0; right:0; bottom:0; height:20vh;
-    background:
-      repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0 2px, transparent 2px 90px),
-      linear-gradient(180deg,#bd8f5a 0%,#a8743f 35%,#8a5a2f 100%);
-    box-shadow:0 -8px 22px rgba(0,0,0,.25);
-  }
-
-  /* flag stand */
-  .flag-scene{ position:absolute; left:50%; bottom:19vh; transform:translateX(-50%); width:440px; height:330px; }
-  .flag-base{
-    position:absolute; left:50%; bottom:-8px; transform:translateX(-50%);
-    width:130px; height:18px; border-radius:50%;
-    background:radial-gradient(ellipse at 40% 30%,#c7ccd1,#6b7076 70%,#4a4e53);
-    box-shadow:0 5px 10px rgba(0,0,0,.35);
-  }
-  .flag-pole{
-    position:absolute; bottom:4px; left:50%; width:6px; height:290px; border-radius:3px;
-    background:linear-gradient(90deg,#878d93,#eceef0 50%,#878d93);
-    transform-origin:bottom center;
-    box-shadow:1px 0 3px rgba(0,0,0,.2);
-  }
-  .pole-left{ transform:translateX(-50%) rotate(-11deg); }
-  .pole-right{ transform:translateX(-50%) rotate(11deg); }
-  .pole-ball{
-    position:absolute; top:-11px; left:50%; transform:translateX(-50%);
-    width:15px; height:15px; border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,#ffe9a8,#d4a017 70%,#a87b0e);
-  }
-
-  /* the waving cloth — made of thin slices so the wave travels along the flag */
-  .flag-cloth{
-    position:absolute; top:4px; display:flex; width:155px; height:98px;
-    filter:drop-shadow(3px 5px 6px rgba(0,0,0,.28));
-  }
-  .pole-left  .flag-cloth{ right:5px; }   /* German flag flows to the LEFT of its pole */
-  .pole-right .flag-cloth{ left:5px; }    /* Indian flag flows to the RIGHT of its pole */
-  .flag-cloth .fs{ flex:1 1 auto; height:100%; animation:clothWave 2.1s ease-in-out infinite; }
-  .flag-german .fs{ background:linear-gradient(180deg,#000000 0 33.4%,#DD0000 33.4% 66.7%,#FFCE00 66.7% 100%); }
-  .flag-indian .fs{ background:linear-gradient(180deg,#FF9933 0 33.4%,#FFFFFF 33.4% 66.7%,#138808 66.7% 100%); }
-  @keyframes clothWave{
-    0%,100%{ transform:translateY(0) scaleY(1); }
-    25%    { transform:translateY(-5px) scaleY(1.04); }
-    75%    { transform:translateY(5px) scaleY(.96); }
-  }
-  .mini-chakra{
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    width:24px; height:24px; border-radius:50%; z-index:2; pointer-events:none;
-    border:2px solid #000080;
-    background:repeating-conic-gradient(#000080 0deg 3deg, transparent 3deg 15deg);
-  }
-
-  /* small login card, far left */
-  .login-card{ width:290px !important; max-width:82vw; padding:14px 16px !important; }
-  .login-card h2{ font-size:14px; }
-  .login-card input, .login-card select{ padding:6px 8px !important; font-size:12px; }
-  .login-card button{ padding:6px 10px; font-size:11.5px; }
+  /* ---------- Login screen: clean dark background ---------- */
+  #loginOverlay{ background:rgba(15,23,42,0.82); backdrop-filter:blur(3px); }
+  .curtain-wrap{ display:none; }
+  .login-card{ box-shadow:0 20px 60px rgba(0,0,0,0.5); }
   .login-card{ position:relative; z-index:2; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
   .pw-wrap{ position:relative; display:flex; align-items:center; }
   .pw-wrap input{ flex:1; padding-right:34px !important; }
@@ -393,13 +319,22 @@ function queueRowSave(row){
 }
 
 async function loadData(){
-  const { data, error } = await sb.from('deductions').select('*').order('created_at', {ascending:false});
-  if(error){
-    document.getElementById('saveStatus').textContent = 'Load failed: ' + error.message;
-    DATA = [];
-    return;
+  // Supabase returns max 1000 rows by default — we page through all rows to get everything
+  const PAGE = 1000;
+  let allRows = [];
+  let from = 0;
+  while(true){
+    const { data, error } = await sb.from('deductions').select('*').order('created_at', {ascending:false}).range(from, from + PAGE - 1);
+    if(error){
+      document.getElementById('saveStatus').textContent = 'Load failed: ' + error.message;
+      DATA = [];
+      return;
+    }
+    allRows = allRows.concat(data || []);
+    if(!data || data.length < PAGE) break;  // last page — we're done
+    from += PAGE;
   }
-  DATA = (data || []).map(fromDb);
+  DATA = allRows.map(fromDb);
 }
 
 // ---------- header ----------
@@ -521,29 +456,8 @@ function applyAccessUI(){
   renderDivisionTabs();
 }
 
-// ---------- Login scene: cloudy sky, wooden table, German + Indian desk flags waving ----------
+// curtain wrap not used — login uses clean dark overlay
 const curtainWrap = document.getElementById('curtainWrap');
-curtainWrap.innerHTML = `
-  <div class="cloud" style="top:6%;  width:280px; height:110px; animation-duration:75s;  animation-delay:-12s"></div>
-  <div class="cloud" style="top:16%; width:360px; height:140px; animation-duration:100s; animation-delay:-45s"></div>
-  <div class="cloud" style="top:30%; width:230px; height:95px;  animation-duration:85s;  animation-delay:-70s"></div>
-  <div class="cloud" style="top:44%; width:300px; height:110px; animation-duration:110s; animation-delay:-25s"></div>
-  <div class="table-top"></div>
-  <div class="flag-scene">
-    <div class="flag-pole pole-left"><div class="pole-ball"></div><div class="flag-cloth flag-german" id="clothGerman"></div></div>
-    <div class="flag-pole pole-right"><div class="pole-ball"></div><div class="flag-cloth flag-indian" id="clothIndian"><div class="mini-chakra"></div></div></div>
-    <div class="flag-base"></div>
-  </div>`;
-const CLOTH_SLICES = 12;
-['clothGerman','clothIndian'].forEach(id=>{
-  const cloth = document.getElementById(id);
-  for(let i=0; i<CLOTH_SLICES; i++){
-    const s = document.createElement('div');
-    s.className = 'fs';
-    s.style.animationDelay = (i * 0.09) + 's'; // ripple travels along the flag like real cloth
-    cloth.appendChild(s);
-  }
-});
 function rollUpCurtain(){
   curtainWrap.classList.add('rolling');
   setTimeout(()=>{
@@ -665,6 +579,8 @@ document.getElementById('btnAccess').addEventListener('click', async ()=>{
 
 
 const yearSelector = document.getElementById('yearSelector');
+// "0" = All Years
+const yearOpt0 = document.createElement('option'); yearOpt0.value='0'; yearOpt0.textContent='All Years'; yearSelector.appendChild(yearOpt0);
 [2024,2025,2026,2027,2028,2029].forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y; if(y===currentYear) o.selected=true; yearSelector.appendChild(o); });
 yearSelector.addEventListener('change', ()=>{ currentYear = Number(yearSelector.value); render(); });
 
@@ -689,7 +605,7 @@ function matches(row){
     const hay = [row.code,row.name,row.refRemarks,row.refNo,row.refFrom].join(' ').toLowerCase();
     if(hay.indexOf(q)===-1) return false;
   }
-  if(Number(row.year) !== currentYear) return false;
+  if(currentYear !== 0 && Number(row.year) !== currentYear) return false;
   const activeDivision = isReadOnly() ? lockedDivision : divisionTabFilter;
   if(activeDivision && row.division !== activeDivision) return false;
   const mf = monthFilter.value;
