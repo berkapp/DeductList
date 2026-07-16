@@ -197,6 +197,8 @@
     <input type="file" id="fileInput" accept=".xlsx" style="display:none">
     <input type="file" id="docFileInput" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,application/pdf,image/*" style="display:none">
     <button class="green" id="btnExport">⬇ Export to Excel</button>
+    <button class="secondary" id="btnMaintOn" style="display:none;color:#92400e">🔧 Maintenance on Progress</button>
+    <button class="secondary" id="btnMaintOff" style="display:none;color:#166534">✅ Maintenance Done</button>
     <button class="secondary" id="btnAccess">🔒 Sign Out</button>
     <span id="modeBadge"></span>
     <span id="saveStatus" style="color:var(--muted);font-size:11px;margin-left:auto"></span>
@@ -215,9 +217,13 @@
   <div class="bird b3"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
   <div class="bird b4"><svg viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" stroke="#3a3a3a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
   <div class="curtain-wrap" id="curtainWrap"></div>
+  <span style="position:absolute;bottom:8px;right:14px;font-size:9px;color:rgba(0,0,0,0.45);z-index:3">prepared by Suhail</span>
   <div class="modal login-card">
     <div id="gateChoice">
       <h2>Enter Deduction List</h2>
+      <div id="maintBanner" style="display:none;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:10px;text-align:center">
+        🔧 <b>Maintenance in Progress</b><br>The system is being updated. Please try again later.
+      </div>
       <label>Division Passcode</label>
       <div class="pw-wrap">
         <input type="password" id="divisionCode" placeholder="Enter your division's passcode">
@@ -262,8 +268,9 @@
     <tfoot><tr id="footRow"></tr></tfoot>
   </table>
 </div>
+<div id="pagerBar" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;font-size:12px"></div>
 <div class="footer-note">
-  Data autosaves to this browser (localStorage) as you type or add/delete rows. Monthly JAN–DEC figures start blank — enter them yourself as deductions actually happen. Pending Deduction = amount owed at creation. Total Deducted = sum of JAN–DEC entered so far. Balance Deduction = Pending Deduction − Total Deducted.
+  All data saves automatically to the cloud (Supabase) as you type or add/delete rows — both PCs always see the same data. Monthly JAN–DEC figures start blank — enter them yourself as deductions actually happen. Pending Deduction = amount owed at creation. Total Deducted = sum of JAN–DEC entered so far. Balance Deduction = Pending Deduction − Total Deducted.
   <br><b>Serial No.</b>: every deduction row has its own unique serial number (shown as the 2nd column, e.g. 001, 002, 003). Serial numbers are assigned in creation order — deleting a row removes its number permanently (no reuse). To post a payment directly: click <b>⚡ Pay by Serial No.</b> in the toolbar, enter the number, choose the month, and enter the amount. For bulk entry: export to Excel, fill in monthly amounts next to the correct Serial Numbers, then import back.
 </div>
 
@@ -489,8 +496,8 @@ let currentYear = 2026;
 
 headRow1.innerHTML = `
   <th rowspan="2" style="width:34px">SL</th>
-  <th rowspan="2" style="width:98px;background:#fff8e1;border-bottom:2px solid #f59e0b">External ID<br><span style="font-weight:400;color:#92400e;font-size:8.5px">Unique Fine/Charge ID</span></th>
   <th rowspan="2" style="width:110px">Division</th>
+  <th rowspan="2" style="width:98px;background:#fff8e1;border-bottom:2px solid #f59e0b">External ID<br><span style="font-weight:400;color:#92400e;font-size:8.5px">Unique Fine/Charge ID</span></th>
   <th rowspan="2" style="width:78px">Code No.</th>
   <th rowspan="2" style="width:150px">Employee Name</th>
   <th rowspan="2" style="width:90px">Balance<br>Deduction</th>
@@ -585,7 +592,7 @@ function renderDivisionTabs(){
   wrap.querySelectorAll('.tab').forEach(t=>{
     t.addEventListener('click', ()=>{
       if(isReadOnly()) return; // locked to one division already
-      divisionTabFilter = t.getAttribute('data-division');
+      divisionTabFilter = t.getAttribute('data-division'); currentPage = 1;
       renderDivisionTabs();
       render();
     });
@@ -598,6 +605,7 @@ function applyAccessUI(){
   document.getElementById('btnImport').style.display = hideAdminOnly ? 'none' : '';
   document.getElementById('btnCarryForward').style.display = hideAdminOnly ? 'none' : '';
   document.getElementById('btnAddDivision').style.display = hideAdminOnly ? 'none' : '';
+  updateMaintButtons();
   updateModeBadge();
   renderDivisionTabs();
 }
@@ -657,7 +665,46 @@ function showToast(msg, ms){
   setTimeout(()=> t.classList.remove('show'), ms || 4000);
 }
 
+// ---------- Maintenance mode (stored in Supabase app_settings so both PCs see it) ----------
+// Toggle buttons live in the ADMIN toolbar only — staff never see them.
+let maintenanceOn = false;
+
+function updateMaintButtons(){
+  const isAdmin = accessMode === 'admin';
+  document.getElementById('btnMaintOn').style.display = (isAdmin && !maintenanceOn) ? '' : 'none';
+  document.getElementById('btnMaintOff').style.display = (isAdmin && maintenanceOn) ? '' : 'none';
+}
+
+async function loadMaintenanceStatus(){
+  try{
+    const { data, error } = await sb.from('app_settings').select('value').eq('key','maintenance').maybeSingle();
+    maintenanceOn = !error && data && data.value === 'on';
+  }catch(e){ maintenanceOn = false; }
+  document.getElementById('maintBanner').style.display = maintenanceOn ? '' : 'none';
+  document.getElementById('divisionSubmit').disabled = maintenanceOn;
+  document.getElementById('divisionSubmit').style.opacity = maintenanceOn ? '0.5' : '1';
+  updateMaintButtons();
+}
+
+// Admin is already signed in when these buttons are visible — just confirm and save
+async function setMaintenance(on){
+  if(accessMode !== 'admin') return;
+  const msg = on
+    ? 'Turn ON maintenance mode?\n\nStaff division logins will be BLOCKED until you press "Maintenance Done".'
+    : 'Finish maintenance?\n\nStaff will be able to log in again.';
+  if(!confirm(msg)) return;
+  const { error } = await sb.from('app_settings').upsert({ key:'maintenance', value: on ? 'on' : 'off' }, { onConflict:'key' });
+  if(error){ alert('Could not update maintenance status: ' + error.message + '\n\n(Have you run the app_settings SQL in Supabase?)'); return; }
+  maintenanceOn = on;
+  await loadMaintenanceStatus();
+  showToast(on ? '🔧 Maintenance mode is ON — staff logins are blocked.' : '✅ Maintenance done — staff can log in again.', 5000);
+}
+
+document.getElementById('btnMaintOn').addEventListener('click', ()=> setMaintenance(true));
+document.getElementById('btnMaintOff').addEventListener('click', ()=> setMaintenance(false));
+
 document.getElementById('divisionSubmit').addEventListener('click', async ()=>{
+  if(maintenanceOn){ document.getElementById('divisionError').textContent = 'System under maintenance — please try later.'; return; }
   const code = document.getElementById('divisionCode').value.trim().toLowerCase();
   const match = Object.keys(DIVISION_PASSCODES).find(d => DIVISION_PASSCODES[d] === code);
   if(!match){ document.getElementById('divisionError').textContent = 'Password entered wrong, please try again.'; return; }
@@ -730,6 +777,7 @@ document.getElementById('btnAccess').addEventListener('click', async ()=>{
 // Always ask for the password on every page open — never auto-resume a previous session
 // Fire-and-forget: don't await this — it was blocking the login button for 25-50s
 sb.auth.signOut();
+loadMaintenanceStatus();
 
 
 
@@ -738,7 +786,7 @@ const yearSelector = document.getElementById('yearSelector');
 // "0" = All Years
 const yearOpt0 = document.createElement('option'); yearOpt0.value='0'; yearOpt0.textContent='All Years'; yearSelector.appendChild(yearOpt0);
 [2024,2025,2026,2027,2028,2029].forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y; if(y===currentYear) o.selected=true; yearSelector.appendChild(o); });
-yearSelector.addEventListener('change', ()=>{ currentYear = Number(yearSelector.value); render(); });
+yearSelector.addEventListener('change', ()=>{ currentYear = Number(yearSelector.value); currentPage = 1; render(); });
 
 const monthFilter = document.getElementById('monthFilter');
 MONTHS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; monthFilter.appendChild(o); });
@@ -788,11 +836,12 @@ function rowHtml(row, sl){
   const balance = rowBalance(row);
   const ro = isReadOnly();
   let html = `<td>${sl}</td>`;
-  // External ID — col 2 (first visible identity column)
-  html += `<td class="extid-cell" style="background:#fffbeb">${row.externalId || '<span style="color:#ccc">—</span>'}${row.externalId ? ` <button type="button" class="secondary" data-action="copy-extid" data-id="${row.id}" title="Copy Serial No. to clipboard">⧉</button>` : ''}</td>`;
+  // Division — col 2
   html += ro
     ? `<td>${row.division||''}</td>`
     : `<td><select data-id="${row.id}" data-field="division"><option value=""></option>${DIVISIONS.map(d=>`<option ${d===row.division?'selected':''}>${d}</option>`).join('')}</select></td>`;
+  // External ID — col 3 (between Division and Code No.)
+  html += `<td class="extid-cell" style="background:#fffbeb">${row.externalId || '<span style="color:#ccc">—</span>'}${row.externalId ? ` <button type="button" class="secondary" data-action="copy-extid" data-id="${row.id}" title="Copy External ID to clipboard">⧉</button>` : ''}</td>`;
   html += ro
     ? `<td>${row.code}</td>`
     : `<td><a href="javascript:void(0)" class="code-link" data-id="${row.id}" title="Edit / update this deduction row">${row.code}</a></td>`;
@@ -817,6 +866,28 @@ function rowHtml(row, sl){
   return html;
 }
 
+// ---------- Pagination (performance: render only 100 rows at a time) ----------
+const PAGE_SIZE = 100;
+let currentPage = 1;
+
+function renderPagination(totalRows, totalPages){
+  const bar = document.getElementById('pagerBar');
+  if(totalRows <= PAGE_SIZE){ bar.innerHTML = ''; return; }
+  const from = (currentPage - 1) * PAGE_SIZE + 1;
+  const to = Math.min(currentPage * PAGE_SIZE, totalRows);
+  bar.innerHTML = `
+    <button class="secondary" id="pgFirst" ${currentPage===1?'disabled':''}>⏮ First</button>
+    <button class="secondary" id="pgPrev" ${currentPage===1?'disabled':''}>◀ Prev</button>
+    <span>Rows <b>${from}–${to}</b> of <b>${totalRows}</b> &nbsp;|&nbsp; Page <b>${currentPage}</b> / ${totalPages}</span>
+    <button class="secondary" id="pgNext" ${currentPage===totalPages?'disabled':''}>Next ▶</button>
+    <button class="secondary" id="pgLast" ${currentPage===totalPages?'disabled':''}>Last ⏭</button>
+  `;
+  document.getElementById('pgFirst').onclick = ()=>{ currentPage = 1; render(); };
+  document.getElementById('pgPrev').onclick = ()=>{ currentPage--; render(); };
+  document.getElementById('pgNext').onclick = ()=>{ currentPage++; render(); };
+  document.getElementById('pgLast').onclick = ()=>{ currentPage = totalPages; render(); };
+}
+
 function render(){
   // Always show rows sorted by External ID ascending (001 at top)
   DATA.sort((a,b)=> (parseInt(a.externalId,10)||999999) - (parseInt(b.externalId,10)||999999));
@@ -825,16 +896,11 @@ function render(){
   let sl=0, sumEid=0,sumUeid=0,sumFine=0,sumPending=0,sumBal=0,sumTotalDeducted=0;
   const monthSums = {}; MONTHS.forEach(m=>monthSums[m]=0);
 
-  const visibleRows = [];
+  // First pass: collect ALL matching rows + totals (totals cover every matching row, not just this page)
+  const matchingRows = [];
   DATA.forEach((row) => {
     if(!matches(row)) return;
-    sl++;
-    visibleRows.push(row);
-    const tr = document.createElement('tr');
-    tr.setAttribute('data-row-id', row.id);
-    tr.innerHTML = rowHtml(row, sl);
-    frag.appendChild(tr);
-
+    matchingRows.push(row);
     sumEid += num(row.eidCharges);
     sumUeid += num(row.ueidCharges);
     sumFine += num(row.fineAmount);
@@ -843,7 +909,24 @@ function render(){
     sumTotalDeducted += rowTotalDeducted(row);
     MONTHS.forEach(m=> monthSums[m] += num(row.months[m]));
   });
+  sl = matchingRows.length;
+
+  // Clamp current page
+  const totalPages = Math.max(1, Math.ceil(matchingRows.length / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  if(currentPage < 1) currentPage = 1;
+
+  // Second pass: render ONLY this page's rows
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = matchingRows.slice(start, start + PAGE_SIZE);
+  pageRows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-row-id', row.id);
+    tr.innerHTML = rowHtml(row, start + i + 1);
+    frag.appendChild(tr);
+  });
   tbody.appendChild(frag);
+  renderPagination(matchingRows.length, totalPages);
 
   let footHtml = `<td colspan="5" style="text-align:right;padding-right:8px">TOTALS (${sl})</td>`;
   footHtml += `<td class="amt">${fmt(sumBal)}</td>`;
@@ -867,11 +950,11 @@ function render(){
 let filterTimer = null;
 function scheduleRender(){
   clearTimeout(filterTimer);
-  filterTimer = setTimeout(render, 220);
+  filterTimer = setTimeout(()=>{ currentPage = 1; render(); }, 220);
 }
 searchEl.addEventListener('input', scheduleRender);
-monthFilter.addEventListener('change', render);
-onlyBalanceEl.addEventListener('change', render);
+monthFilter.addEventListener('change', ()=>{ currentPage = 1; render(); });
+onlyBalanceEl.addEventListener('change', ()=>{ currentPage = 1; render(); });
 
 // ---------- Event delegation for edits (no full re-render per keystroke) ----------
 tbody.addEventListener('change', (e)=>{
@@ -1257,14 +1340,14 @@ docFileInput.addEventListener('change', async ()=>{
 // ---------- Export ----------
 document.getElementById('btnExport').addEventListener('click', ()=>{
   const rows = [];
-  // Col order matches screen: SL | External ID | Division | Code | Name | Balance | DeducType(3) | Remarks(3) | Pending | Year | JAN-DEC | Total | DocLink
-  rows.push(['','SL.','Serial No.','Division','Code No.','Employee Name','Balance Deduction','Deduction Type','','','Deduction Remarks','','','Pending Deduction','Year',
+  // Col order matches screen: SL | Division | External ID | Code | Name | Balance | DeducType(3) | Remarks(3) | Pending | Year | JAN-DEC | Total | DocLink
+  rows.push(['','SL.','Division','External ID','Code No.','Employee Name','Balance Deduction','Deduction Type','','','Deduction Remarks','','','Pending Deduction','Year',
     'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','Total Deducted','Document Link']);
   rows.push(['','','','','','','','EID Charges','UEID Charges','Fines','Reference from','Reference No.','Reference Type and Remarks','','',
     '','','','','','','','','','','','','','']);
   const visible = DATA.filter(matches);
   visible.forEach((row,i)=>{
-    const line = ['', i+1, row.externalId||'', row.division||'', row.code, row.name||'', fmt(rowBalance(row)),
+    const line = ['', i+1, row.division||'', row.externalId||'', row.code, row.name||'', fmt(rowBalance(row)),
       row.eidCharges||'', row.ueidCharges||'', row.fineAmount||'',
       row.refFrom||'', row.refNo||'', row.refRemarks||'',
       row.pendingDeduction||'', row.year||''];
